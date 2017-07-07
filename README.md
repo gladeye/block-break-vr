@@ -11,10 +11,21 @@ npm install
 
 ## Developers
 
+### Development Mode
+
 *   Run the following to start the development server:
 
-```
-npm start
-```
+    ```
+    npm start
+    ```
 
-*   Open your browser to http://localhost:8080 to view the project
+    Open your browser to http://localhost:8080 to view the project.
+
+### Production Mode
+
+*   Run the following to start the server in production mode so you can access the server via your IP address
+
+    ```
+    npm run prod
+    ```
+    Open your browser to http://YOUR_IP:8080 to view the project.
