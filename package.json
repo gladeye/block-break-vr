@@ -8,9 +8,12 @@
     "dev": "npm run watch & cross-env NODE_ENV=development node ./server/server.js",
     "prod": "npm run build && cross-env NODE_ENV=production node ./server/server.js",
     "prewatch": "shx mkdir -p _build",
-    "watch": "watchify client/js/index.js -o _build/index.js -v",
     "prebuild": "shx mkdir -p _build",
-    "build": "browserify client/js/index.js -o _build/index.js",
+    "watch-js": "watchify client/js/index.js -o _build/index.js.tmp -dv",
+    "watch-extract": "onchange _build/index.js.tmp -- npm run extract",
+    "watch": "touch _build/index.js.tmp; npm run watch-js & npm run watch-extract",
+    "extract": "<_build/index.js.tmp exorcist _build/index.js.map > _build/index.js",
+    "build": "browserify client/js/index.js -o _build/index.js.tmp -dv && npm run extract",
     "deploy": "git checkout master && git pull --rebase && git push git@github.com:caseyyee/webvr-multiuser-boilerplate.git master",
     "easyrtc-install": "cd ./node_modules/easyrtc && npm install",
     "favicon": "convert -density 400 -background transparent client/img/icon-190.png -define icon:auto-resize=16,32,48,64,128 -colors 256 client/favicon.ico",
@@ -41,7 +44,9 @@
     "watchify": "^3.9.0"
   },
   "devDependencies": {
+    "exorcist": "^0.4.0",
     "nodemon": "^1.11.0",
+    "onchange": "^3.2.1",
     "semistandard": "^10.0.0",
     "snazzy": "^6.0.0"
   }
