@@ -1,0 +1,100 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Dev Example — Networked-Aframe</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000">
+
+    <link rel="manifest" href="manifest.webmanifest">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+    <script src="https://cdn.rawgit.com/priologic/easyrtc/v1.1.0/api/easyrtc.js"></script>
+    <script src="/js/index.js"></script>
+
+</head>
+<body>
+
+<a-scene main networked-scene="
+      room: dev;
+      debug: true;
+      audio: false;
+    ">
+    <a-assets>
+
+        <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
+        <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
+
+        <!-- Templates -->
+
+        <!-- Player -->
+        <script id="player-template" type="text/html">
+            <a-entity></a-entity>
+        </script>
+
+        <!-- Head -->
+        <script id="head-template" type="text/html">
+            <a-entity class="avatar">
+                <a-sphere class="head"
+                          color="#5985ff"
+                          scale="0.3 0.35 0.25"
+                          random-color
+                        ></a-sphere>
+                <a-entity class="face"
+                          position="0 0.05 0"
+                        >
+                    <a-sphere class="eye"
+                              color="#efefef"
+                              position="0.1 0.1 -0.2"
+                              scale="0.12 0.12 0.12"
+                            >
+                        <a-sphere class="pupil"
+                                  color="#000"
+                                  position="0 0 -1"
+                                  scale="0.2 0.2 0.2"
+                                ></a-sphere>
+                    </a-sphere>
+                    <a-sphere class="eye"
+                              color="#efefef"
+                              position="-0.1 0.1 -0.2"
+                              scale="0.12 0.12 0.12"
+                            >
+                        <a-sphere class="pupil"
+                                  color="#000"
+                                  position="0 0 -1"
+                                  scale="0.2 0.2 0.2"
+                                ></a-sphere>
+                    </a-sphere>
+                </a-entity>
+            </a-entity>
+        </script>
+
+        <!-- Hand -->
+        <script id="hand-template" type="text/html">
+            <a-box scale="0.1 0.1 0.1"></a-box>
+        </script>
+
+        <!-- /Templates -->
+    </a-assets>
+
+    <a-entity id="player" networked="template:#player-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 0 0" wasd-controls look-controls >
+        <a-entity camera networked="template:#head-template;showLocalTemplate:false;"></a-entity>
+
+        <a-entity id="left-hand" hand-controls="left" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
+        <a-entity id="right-hand" hand-controls="right" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
+
+    </a-entity>
+
+    <!-- hover & drag-drop won't have any obvious effect without some additional event handlers or components. See the examples page for more -->
+    <a-box hoverable grabbable stretchable drag-droppable
+           color="blue" position="0 0 -1"></a-box>
+
+
+    <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>
+
+</a-scene>
+
+<script>
+
+</script>
+</body>
+</html>
