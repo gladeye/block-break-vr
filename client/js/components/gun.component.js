@@ -19,6 +19,7 @@ AFRAME.registerComponent('gun', {
 
   createBullet: function() {
     var tip = document.querySelector('#player .gun-tip');
+    var sceneEl = tip.sceneEl;
 
     var entity = document.createElement('a-entity');
     entity.setAttribute('position', this.getInitialBulletPosition(tip));
@@ -30,10 +31,12 @@ AFRAME.registerComponent('gun', {
     //entity.setAttribute('dynamic-body', 'sphereRadius',0.1);
     entity.setAttribute('forward', 'speed', 0.3);
     entity.setAttribute('forward', 'directionEl', '#player .gun-tip');
-    entity.setAttribute('sphere-collider', '');
+    //entity.setAttribute('sphere-collider', 'objects', '#environment-collision1,.voxel');
+    sceneEl.appendChild(entity);
 
-    entity.addEventListener('hit', this.explode(event));
-    tip.sceneEl.appendChild(entity);
+    entity.addEventListener('hit', function(){
+      console.log('Bullet hit');
+    });
   },
 
   getInitialBulletPosition: function(spawnerEl) {

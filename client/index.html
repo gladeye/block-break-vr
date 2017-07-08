@@ -91,7 +91,7 @@
     </a-assets>
         <!-- Bullet -->
         <script id="bullet-template" type="text/html">
-          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl">
+          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects:#environment-collision1,.voxel;">
             <a-animation attribute="rotation" to="360 0 0" easing="linear" dur="1000" repeat="indefinite"></a-animation>
           </a-entity> 
         </script>
