@@ -16,10 +16,26 @@ var headSchema = {
         }
     ]
 };
+var voxelSchema = {
+    template: '#greystone-block-template',
+    components: [
+        'position',
+        'rotation',
+        {
+            selector: '.voxel',
+            component: 'dynamic-body'
+        },
+        {
+            selector: '.voxel',
+            component: 'static-body'
+        }
+    ]
+};
 if(typeof NAF !== 'undefined'){
     NAF.options.compressSyncPackets = true;
     NAF.options.updateRate = 1;
     NAF.schemas.add(headSchema);
+    NAF.schemas.add(voxelSchema);
 }
 
 // Called by Networked-Aframe when connected to server
@@ -87,11 +103,19 @@ AFRAME.registerSystem('main', {
             var targetEl = e.detail.body.el;
 
             if(targetEl && targetEl.getAttribute('class') === 'voxel'){
-                targetEl.removeAttribute('dynamic-body');
-                targetEl.setAttribute('static-body','');
+
+                console.log('Voxel has collided with environment');
+
+                setTimeout(function(){
+                    targetEl.removeAttribute('dynamic-body');
+                    targetEl.setAttribute('static-body','');
+                    console.log('Removed dynamic body from voxel');
+                },5000)
+
+
             }
 
-            console.log('Voxel has collided with environment');
+
 
             //e.detail.target.el;  // Original entity (playerEl).
             //e.detail.body.el;    // Other entity, which playerEl touched.
