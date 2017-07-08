@@ -19,7 +19,7 @@
     "favicon": "convert -density 400 -background transparent client/img/icon-190.png -define icon:auto-resize=16,32,48,64,128 -colors 256 client/favicon.ico",
     "postinstall": "npm run easyrtc-install",
     "lint": "semistandard -v | snazzy",
-    "ghpages": "npm run dist && ghpages -d _dist",
+    "ghpages": "npm run dist && ./node_modules/.bin/gh-pages -d _dist -b gh-pages",
     "dist": "mkdir _dist; npm run build && cp -R client/* _dist/ && cp _build/index.js _dist/ && cp _build/index.js.map _dist/"
   },
   "author": "Michael Andrew <michael.andrew@gladeye.com>, Ben Sharp <ben.sharp@gladeye.com>",
@@ -47,6 +47,7 @@
   },
   "devDependencies": {
     "exorcist": "^0.4.0",
+    "gh-pages-cli": "^0.2.0",
     "ghpages": "0.0.10",
     "nodemon": "^1.11.0",
     "onchange": "^3.2.1",
