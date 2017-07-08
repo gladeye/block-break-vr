@@ -98,7 +98,7 @@
     </a-assets>
         <!-- Bullet -->
         <script id="bullet-template" type="text/html">
-          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects: .voxel;">
+          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects:.voxel; watch: false; radius: 0.01">
             <a-animation attribute="rotation" to="360 0 0" easing="linear" dur="1000" repeat="indefinite"></a-animation>
           </a-entity> 
         </script>
@@ -129,8 +129,11 @@
 
     </a-entity>
 
+    <a-box id="bullet-collider" class="bullet-collider" position="0 -0.5 0" width="30" depth="30" height="1"></a-box>
+
+
     <a-entity visible="true" position="0 -15 0">
-        <a-box id="environment-collision1" static-body position="0 0 0" width="30" depth="30" height="30"></a-box>
+        <a-box id="environment-collision1" class="environment" static-body position="0 0 0" width="30" depth="30" height="30"></a-box>
     </a-entity>
 
     <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>

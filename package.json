@@ -27,7 +27,7 @@
   "dependencies": {
     "aframe": "^0.6.0",
     "aframe-environment-component": "git@github.com:feiss/aframe-environment-component.git#3af5877e00521d0e1261f0ff3ed77a0dbd096581",
-    "aframe-extras": "git@github.com:HAZARDU5/aframe-extras.git#b81e0bdf94351d9210bff5f2c350bee152cbee86",
+    "aframe-extras": "^3.8.6",
     "aframe-gradient-sky": "^1.0.4",
     "aframe-particle-system-component": "^1.0.10",
     "aframe-physics-system": "^1.4.1",
