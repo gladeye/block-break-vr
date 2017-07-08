@@ -78,7 +78,7 @@
 
     <a-entity id="player" camera="userHeight: 1.6" networked="template:#avatar-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 1.6 0" universal-controls="movementControls: checkpoint, keyboard"
               checkpoint-controls="mode: teleport"
-              kinematic-body="shape: box;"
+              kinematic-body="radius: 0.5; enableSlopes: false;"
               jump-ability>
         <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
                   position="0 0 -1"
