@@ -31,7 +31,7 @@
 
         <script id="greystone-block-template" type="text/html">
             <a-entity class="voxel"
-                      geometry="primitive: box; height: 0.5; width: 0.5; depth: 0.5"
+                      geometry="primitive: box; height: 1; width: 1; depth: 1"
                       material="src: #greystone-texture; shader: standard; roughness: 1; metalness: 0; wireframe: false;"
                       grab shadow="receive: false"
                       static-body
@@ -82,7 +82,7 @@
 
   <a-entity obj-model="obj: #bomb-obj; mtl: #bomb-mtl"></a-entity>
 
-    <a-entity id="player" camera="userHeight: 1.6" networked="template:#player-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 1.6 0" universal-controls="movementControls: checkpoint, keyboard"
+    <a-entity id="player" camera="userHeight: 1.6" networked="template:#avatar-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 1.6 0" universal-controls="movementControls: checkpoint, keyboard"
               checkpoint-controls="mode: teleport"
               kinematic-body="shape: box;"
               jump-ability>
@@ -91,7 +91,7 @@
                   geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03;"
                   material="color: black; shader: flat"
                   raycaster="objects: .checkpoint, #environment-collision1, .voxel"
-                  intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.25 0.25 0.25; snap: 0.5 0.5 0.5">
+                  intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1">
             <a-animation begin="click" attribute="material.color" from="red" to="black" dur="0" dur="250"></a-animation>
             <a-animation begin="click" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
             <a-animation begin="mouseleave" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
@@ -103,7 +103,7 @@
         </a-entity>
 
         <a-entity id="left-hand" oculus-touch-controls="hand: left" vive-controls="hand: left"  teleport-controls="type: parabolic; collisionEntities: [class='voxel'], #environment-collision1; maxLength: 20; curveShootingSpeed: 20;" hand-controls="left" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
-        <a-entity id="right-hand" hand-controls="right" controller-cursor intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.25 0.25 0.25; snap: 0.5 0.5 0.5" hand-controls="right" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
+        <a-entity id="right-hand" hand-controls="right" controller-cursor intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1" hand-controls="right" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
 
     </a-entity>
 
