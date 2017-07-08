@@ -96,6 +96,8 @@ AFRAME.registerSystem('main', {
 
         var sceneEl = document.querySelector('a-scene');
 
+        var cursorEl = document.querySelector('#cursor');
+
         var envCollision = document.getElementById('environment-collision1');
 
         envCollision.addEventListener('collide', function (e) {
@@ -121,6 +123,12 @@ AFRAME.registerSystem('main', {
             //e.detail.body.el;    // Other entity, which playerEl touched.
             //e.detail.contact;    // Stats about the collision (CANNON.ContactEquation).
             //e.detail.contact.ni; // Normal (direction) of the collision (CANNON.Vec3).
+        });
+
+        cursorEl.addEventListener('spawnEvent',function(e){
+            console.log('Spawned voxel from network', e.detail.target);
+
+            e.detail.target.setAttribute('dynamic-body', '');
         });
 
         this.optimizeMobile();

@@ -57,6 +57,13 @@ AFRAME.registerComponent('intersection-spawn-multi', {
         spawnEl.setAttribute('networked', 'showLocalTemplate', true);
         spawnEl.setAttribute('position', pos.x+' '+pos.y+' '+pos.z);
         sceneEl.appendChild(spawnEl);
+
+        NAF.utils.whenEntityLoaded(spawnEl, function(e) {
+          var spawnEvent = new CustomEvent('spawnEvent', {'detail': {
+            target: spawnEl
+          }});
+          el.dispatchEvent(spawnEvent);
+        });
       }
     });
   }
