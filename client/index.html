@@ -17,7 +17,7 @@
 <a-scene main networked-scene="
       room: dev;
       debug: true;
-    ">
+    " debug>
     <a-assets>
 
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
@@ -25,25 +25,21 @@
 
         <!-- Templates -->
 
-        <!-- Player -->
-        <script id="player-template" type="text/html">
-            <a-entity></a-entity>
-        </script>
-
         <script id="greystone-block-template" type="text/html">
             <a-entity class="voxel"
                       geometry="primitive: box; height: 0.5; width: 0.5; depth: 0.5"
                       material="src: #greystone-texture; shader: standard; roughness: 1; metalness: 0; wireframe: false;"
-                      grab shadow="receive: true"
+                      grab shadow="receive: false"
+                      static-body
                     ></a-entity>
         </script>
 
-        <!-- Head -->
-        <script id="head-template" type="text/html">
+        <!-- Avatar -->
+        <script id="avatar-template" type="text/html">
             <a-entity class="avatar">
                 <a-sphere class="head"
                           color="#5985ff"
-                          scale="0.3 0.35 0.25"
+                          scale="0.45 0.5 0.4"
                           random-color
                         ></a-sphere>
                 <a-entity class="face"
@@ -51,7 +47,7 @@
                         >
                     <a-sphere class="eye"
                               color="#efefef"
-                              position="0.1 0.1 -0.2"
+                              position="0.16 0.1 -0.35"
                               scale="0.12 0.12 0.12"
                             >
                         <a-sphere class="pupil"
@@ -62,7 +58,7 @@
                     </a-sphere>
                     <a-sphere class="eye"
                               color="#efefef"
-                              position="-0.1 0.1 -0.2"
+                              position="-0.16 0.1 -0.35"
                               scale="0.12 0.12 0.12"
                             >
                         <a-sphere class="pupil"
@@ -75,33 +71,29 @@
             </a-entity>
         </script>
 
-        <!-- Hand -->
-        <script id="hand-template" type="text/html">
-            <a-box scale="0.1 0.1 0.1"></a-box>
-        </script>
-
         <img id="greystone-texture" src="assets/img/tiles/greystone.png" />
 
         <!-- /Templates -->
     </a-assets>
 
-    <a-entity id="player" networked="template:#player-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 0 0" wasd-controls look-controls >
-        <a-entity camera networked="template:#head-template;showLocalTemplate:false;">
-            <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
-                      position="0 0 -1"
-                      geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03;"
-                      material="color: black; shader: flat"
-                      raycaster="objects: .checkpoint, #environment-collision1, .voxel"
-                      intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.25 0.25 0.25; snap: 0.5 0.5 0.5">
-                <a-animation begin="click" attribute="material.color" from="red" to="black" dur="0" dur="250"></a-animation>
-                <a-animation begin="click" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
-                <a-animation begin="mouseleave" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
-                <a-animation begin="cursor-fusing" attribute="material.color" from="black" to="red" dur="2000"></a-animation>
-                <a-animation begin="cursor-fusing" easing="ease-in" attribute="scale"
-                             fill="forwards" from="1 1 1" to="0.7 0.7 0.7" dur="250"></a-animation>
-                <a-animation begin="mouseleave" easing="ease-in" attribute="scale"
-                             fill="forwards" from="0.7 0.7 0.7" to="1 1 1" dur="250"></a-animation>
-            </a-entity>
+    <a-entity id="player" camera="userHeight: 1.6" networked="template:#player-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 1.6 0" universal-controls="movementControls: checkpoint, keyboard"
+              checkpoint-controls="mode: teleport"
+              kinematic-body="shape: box;"
+              jump-ability>
+        <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03;"
+                  material="color: black; shader: flat"
+                  raycaster="objects: .checkpoint, #environment-collision1, .voxel"
+                  intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.25 0.25 0.25; snap: 0.5 0.5 0.5">
+            <a-animation begin="click" attribute="material.color" from="red" to="black" dur="0" dur="250"></a-animation>
+            <a-animation begin="click" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
+            <a-animation begin="mouseleave" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
+            <a-animation begin="cursor-fusing" attribute="material.color" from="black" to="red" dur="2000"></a-animation>
+            <a-animation begin="cursor-fusing" easing="ease-in" attribute="scale"
+                         fill="forwards" from="1 1 1" to="0.7 0.7 0.7" dur="250"></a-animation>
+            <a-animation begin="mouseleave" easing="ease-in" attribute="scale"
+                         fill="forwards" from="0.7 0.7 0.7" to="1 1 1" dur="250"></a-animation>
         </a-entity>
 
         <a-entity id="left-hand" oculus-touch-controls="hand: left" vive-controls="hand: left"  teleport-controls="type: parabolic; collisionEntities: [class='voxel'], #environment-collision1; maxLength: 20; curveShootingSpeed: 20;" hand-controls="left" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>

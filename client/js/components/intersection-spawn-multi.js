@@ -60,7 +60,8 @@ AFRAME.registerComponent('intersection-spawn-multi', {
 
         NAF.utils.whenEntityLoaded(spawnEl, function(e) {
           var spawnEvent = new CustomEvent('spawnEvent', {'detail': {
-            target: spawnEl
+            target: spawnEl,
+            pos: pos
           }});
           el.dispatchEvent(spawnEvent);
         });

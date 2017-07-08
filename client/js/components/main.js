@@ -5,8 +5,8 @@ if (typeof AFRAME === 'undefined') {
 }
 
 // Define custom schema for syncing avatar color, set by random-color
-var headSchema = {
-    template: '#head-template',
+var avatarSchema = {
+    template: '#avatar-template',
     components: [
         'position',
         'rotation',
@@ -20,21 +20,13 @@ var voxelSchema = {
     template: '#greystone-block-template',
     components: [
         'position',
-        'rotation',
-        {
-            selector: '.voxel',
-            component: 'dynamic-body'
-        },
-        {
-            selector: '.voxel',
-            component: 'static-body'
-        }
+        'rotation'
     ]
 };
 if(typeof NAF !== 'undefined'){
     NAF.options.compressSyncPackets = true;
     NAF.options.updateRate = 1;
-    NAF.schemas.add(headSchema);
+    NAF.schemas.add(avatarSchema);
     NAF.schemas.add(voxelSchema);
 }
 
@@ -100,7 +92,7 @@ AFRAME.registerSystem('main', {
 
         var envCollision = document.getElementById('environment-collision1');
 
-        envCollision.addEventListener('collide', function (e) {
+        /*envCollision.addEventListener('collide', function (e) {
 
             var targetEl = e.detail.body.el;
 
@@ -123,12 +115,32 @@ AFRAME.registerSystem('main', {
             //e.detail.body.el;    // Other entity, which playerEl touched.
             //e.detail.contact;    // Stats about the collision (CANNON.ContactEquation).
             //e.detail.contact.ni; // Normal (direction) of the collision (CANNON.Vec3).
-        });
+        });*/
 
         cursorEl.addEventListener('spawnEvent',function(e){
-            console.log('Spawned voxel from network', e.detail.target);
 
-            e.detail.target.setAttribute('dynamic-body', '');
+            /*var voxelEl = e.detail.target.childNodes[0];
+
+            console.log('Spawned voxel from network', voxelEl);
+
+            if(voxelEl){
+                //voxelEl.position = e.detail.pos;
+                voxelEl.removeAttribute('dynamic-body', '');
+
+                console.log('Setting pos: ',e.detail.pos);
+
+                setTimeout(function(){
+                    voxelEl.setAttribute('position', e.detail.pos.x+' '+e.detail.pos.y+' '+e.detail.pos.z);
+
+                    setTimeout(function(){
+                        voxelEl.setAttribute('dynamic-body', '');
+                    },500);
+                },500);
+            }*/
+
+
+
+
         });
 
         this.optimizeMobile();
