@@ -30,6 +30,9 @@ AFRAME.registerComponent('gun', {
     //entity.setAttribute('dynamic-body', 'sphereRadius',0.1);
     entity.setAttribute('forward', 'speed', 0.3);
     entity.setAttribute('forward', 'directionEl', '#player .gun-tip');
+    entity.setAttribute('sphere-collider', '');
+
+    entity.addEventListener('hit', this.explode(event));
     tip.sceneEl.appendChild(entity);
   },
 
@@ -54,5 +57,9 @@ AFRAME.registerComponent('gun', {
 
   vec3RadToDeg: function(rad) {
     rad.set(THREE.Math.radToDeg(rad.x), THREE.Math.radToDeg(rad.y), THREE.Math.radToDeg(rad.z));
+  },
+
+  explode: function(event) {
+      console.log('hit event', event);
   }
 });
