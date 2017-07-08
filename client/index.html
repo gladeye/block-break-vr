@@ -17,7 +17,6 @@
 <a-scene main networked-scene="
       room: dev;
       debug: true;
-      audio: false;
     ">
     <a-assets>
 
@@ -29,6 +28,14 @@
         <!-- Player -->
         <script id="player-template" type="text/html">
             <a-entity></a-entity>
+        </script>
+
+        <script id="greystone-block-template" type="text/html">
+            <a-entity class="voxel"
+                      geometry="primitive: box; height: 0.5; width: 0.5; depth: 0.5"
+                      material="src: #greystone-texture; shader: standard; roughness: 1; metalness: 0; wireframe: false;"
+                      grab shadow="receive: true"
+                    ></a-entity>
         </script>
 
         <!-- Head -->
@@ -73,21 +80,38 @@
             <a-box scale="0.1 0.1 0.1"></a-box>
         </script>
 
+        <img id="greystone-texture" src="assets/img/tiles/greystone.png" />
+
         <!-- /Templates -->
     </a-assets>
 
     <a-entity id="player" networked="template:#player-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 0 0" wasd-controls look-controls >
-        <a-entity camera networked="template:#head-template;showLocalTemplate:false;"></a-entity>
+        <a-entity camera networked="template:#head-template;showLocalTemplate:false;">
+            <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
+                      position="0 0 -1"
+                      geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03;"
+                      material="color: black; shader: flat"
+                      raycaster="objects: .checkpoint, #environment-collision1, .voxel"
+                      intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.25 0.25 0.25; snap: 0.5 0.5 0.5">
+                <a-animation begin="click" attribute="material.color" from="red" to="black" dur="0" dur="250"></a-animation>
+                <a-animation begin="click" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
+                <a-animation begin="mouseleave" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
+                <a-animation begin="cursor-fusing" attribute="material.color" from="black" to="red" dur="2000"></a-animation>
+                <a-animation begin="cursor-fusing" easing="ease-in" attribute="scale"
+                             fill="forwards" from="1 1 1" to="0.7 0.7 0.7" dur="250"></a-animation>
+                <a-animation begin="mouseleave" easing="ease-in" attribute="scale"
+                             fill="forwards" from="0.7 0.7 0.7" to="1 1 1" dur="250"></a-animation>
+            </a-entity>
+        </a-entity>
 
-        <a-entity id="left-hand" hand-controls="left" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
-        <a-entity id="right-hand" hand-controls="right" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
+        <a-entity id="left-hand" oculus-touch-controls="hand: left" vive-controls="hand: left"  teleport-controls="type: parabolic; collisionEntities: [class='voxel'], #environment-collision1; maxLength: 20; curveShootingSpeed: 20;" hand-controls="left" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
+        <a-entity id="right-hand" hand-controls="right" controller-cursor intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.25 0.25 0.25; snap: 0.5 0.5 0.5" hand-controls="right" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
 
     </a-entity>
 
-    <!-- hover & drag-drop won't have any obvious effect without some additional event handlers or components. See the examples page for more -->
-    <a-box hoverable grabbable stretchable drag-droppable
-           color="blue" position="0 0 -1"></a-box>
-
+    <a-entity visible="true" position="0 -1 0">
+        <a-box id="environment-collision1" position="0 0 0" width="10" depth="10" height="0.1"></a-box>
+    </a-entity>
 
     <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>
 

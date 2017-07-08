@@ -17,6 +17,8 @@ var headSchema = {
     ]
 };
 if(typeof NAF !== 'undefined'){
+    NAF.options.compressSyncPackets = true;
+    NAF.options.updateRate = 1;
     NAF.schemas.add(headSchema);
 }
 
@@ -120,6 +122,10 @@ AFRAME.registerSystem('main', {
             if(particles){
                 particles.parentNode.removeChild(particles);
             }
+
+            var cursor = document.getElementById('cursor');
+            cursor.setAttribute('cursor','fuse',true);
+            cursor.setAttribute('cursor','fuseTimeout',200);
 
         }
 

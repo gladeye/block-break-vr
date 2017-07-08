@@ -5,5 +5,6 @@ require('aframe-environment-component/index.js');
 require('aframe-gradient-sky');
 require('aframe-randomizer-components');
 require('aframe-particle-system-component');
+require('./components/intersection-spawn-multi');
 require('./components/main');
 
