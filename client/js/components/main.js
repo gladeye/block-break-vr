@@ -24,8 +24,8 @@ var voxelSchema = {
     ]
 };
 if(typeof NAF !== 'undefined'){
-    NAF.options.compressSyncPackets = true;
-    NAF.options.updateRate = 1;
+    NAF.options.compressSyncPackets = false;
+    NAF.options.updateRate = 10;
     NAF.schemas.add(avatarSchema);
     NAF.schemas.add(voxelSchema);
 }
