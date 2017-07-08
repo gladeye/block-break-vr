@@ -1,0 +1,135 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Block Break VR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000">
+
+    <link rel="manifest" href="manifest.webmanifest">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+    <script src="https://cdn.rawgit.com/priologic/easyrtc/v1.1.0/api/easyrtc.js"></script>
+    <script src="/js/index.js"></script>
+
+</head>
+<body>
+
+<a-scene main networked-scene="
+      room: dev;
+      debug: false;
+    " debug>
+    <a-assets>
+
+
+      <a-asset-item id="bomb-obj" src="/assets/obj/exploding-bomb/model.obj"></a-asset-item>
+      <a-asset-item id="bomb-mtl" src="/assets/obj/exploding-bomb/materials.mtl"></a-asset-item>
+
+        <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
+        <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
+
+        <!-- Templates -->
+
+        <script id="greystone-block-template" type="text/html">
+            <a-entity class="voxel"
+                      geometry="primitive: box; height: 1; width: 1; depth: 1"
+                      material="src: #greystone-texture; shader: standard; roughness: 1; metalness: 0; wireframe: false;"
+                      grab shadow="receive: false"
+                      static-body
+                    ></a-entity>
+        </script>
+
+        <!-- Avatar -->
+        <script id="avatar-template" type="text/html">
+            <a-entity class="avatar">
+                <a-sphere class="head"
+                          color="#5985ff"
+                          scale="0.45 0.5 0.4"
+                          random-color
+                        ></a-sphere>
+                <a-entity class="face"
+                          position="0 0.05 0"
+                        >
+                    <a-sphere class="eye"
+                              color="#efefef"
+                              position="0.16 0.1 -0.35"
+                              scale="0.12 0.12 0.12"
+                            >
+                        <a-sphere class="pupil"
+                                  color="#000"
+                                  position="0 0 -1"
+                                  scale="0.2 0.2 0.2"
+                                ></a-sphere>
+                    </a-sphere>
+                    <a-sphere class="eye"
+                              color="#efefef"
+                              position="-0.16 0.1 -0.35"
+                              scale="0.12 0.12 0.12"
+                            >
+                        <a-sphere class="pupil"
+                                  color="#000"
+                                  position="0 0 -1"
+                                  scale="0.2 0.2 0.2"
+                                ></a-sphere>
+                    </a-sphere>
+                </a-entity>
+                <a-entity id="gun" class="gun">
+                    <a-box
+                            position="0.51 -0.13 -0.29"
+                            scale="0.19 0.23 0.67"
+                            color="#000"
+                            ></a-box>
+                    <a-entity id="gun-tip" class="gun-tip"
+                              position="0.51 -0.10 -0.64"
+                            ></a-entity>
+                </a-entity>
+            </a-entity>
+        </script>
+
+        <img id="greystone-texture" src="assets/img/tiles/greystone.png" />
+
+        <!-- /Templates -->
+    </a-assets>
+        <!-- Bullet -->
+        <script id="bullet-template" type="text/html">
+          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl"></a-entity> 
+        </script>
+
+    <a-entity id="player" camera="userHeight: 1.6" networked="template:#avatar-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 1.6 0" universal-controls="movementControls: checkpoint, keyboard"
+              checkpoint-controls="mode: teleport"
+              gun="bulletTemplate:#bullet-template; triggerKeyCode:17;"
+              kinematic-body="radius: 0.5; enableSlopes: false;"
+              jump-ability>
+        <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03;"
+                  material="color: black; shader: flat"
+                  raycaster="objects: .checkpoint, #environment-collision1, .voxel"
+                  intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1">
+            <a-animation begin="click" attribute="material.color" from="red" to="black" dur="0" dur="250"></a-animation>
+            <a-animation begin="click" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
+            <a-animation begin="mouseleave" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
+            <a-animation begin="cursor-fusing" attribute="material.color" from="black" to="red" dur="2000"></a-animation>
+            <a-animation begin="cursor-fusing" easing="ease-in" attribute="scale"
+                         fill="forwards" from="1 1 1" to="0.7 0.7 0.7" dur="250"></a-animation>
+            <a-animation begin="mouseleave" easing="ease-in" attribute="scale"
+                         fill="forwards" from="0.7 0.7 0.7" to="1 1 1" dur="250"></a-animation>
+        </a-entity>
+
+        <a-entity id="left-hand" oculus-touch-controls="hand: left" vive-controls="hand: left"  teleport-controls="type: parabolic; collisionEntities: [class='voxel'], #environment-collision1; maxLength: 20; curveShootingSpeed: 20;" hand-controls="left" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
+        <a-entity id="right-hand" hand-controls="right" controller-cursor intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1" hand-controls="right" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
+
+    </a-entity>
+
+    <a-entity visible="true" position="0 -15 0">
+        <a-box id="environment-collision1" static-body position="0 0 0" width="30" depth="30" height="30"></a-box>
+    </a-entity>
+
+    <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>
+
+</a-scene>
+
+<script>
+
+</script>
+</body>
+</html>
