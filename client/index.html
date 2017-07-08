@@ -35,6 +35,8 @@
                       geometry="primitive: box; height: 0.5; width: 0.5; depth: 0.5"
                       material="src: #greystone-texture; shader: standard; roughness: 1; metalness: 0; wireframe: false;"
                       grab shadow="receive: true"
+                      dynamic-body
+                      snap
                     ></a-entity>
         </script>
 
@@ -110,7 +112,7 @@
     </a-entity>
 
     <a-entity visible="true" position="0 -1 0">
-        <a-box id="environment-collision1" position="0 0 0" width="10" depth="10" height="0.1"></a-box>
+        <a-box id="environment-collision1" static-body position="0 0 0" width="10" depth="10" height="0.1"></a-box>
     </a-entity>
 
     <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>

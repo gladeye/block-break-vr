@@ -80,6 +80,25 @@ AFRAME.registerSystem('main', {
 
         var sceneEl = document.querySelector('a-scene');
 
+        var envCollision = document.getElementById('environment-collision1');
+
+        envCollision.addEventListener('collide', function (e) {
+
+            var targetEl = e.detail.body.el;
+
+            if(targetEl && targetEl.getAttribute('class') === 'voxel'){
+                targetEl.removeAttribute('dynamic-body');
+                targetEl.setAttribute('static-body','');
+            }
+
+            console.log('Voxel has collided with environment');
+
+            //e.detail.target.el;  // Original entity (playerEl).
+            //e.detail.body.el;    // Other entity, which playerEl touched.
+            //e.detail.contact;    // Stats about the collision (CANNON.ContactEquation).
+            //e.detail.contact.ni; // Normal (direction) of the collision (CANNON.Vec3).
+        });
+
         this.optimizeMobile();
     },
 
@@ -98,7 +117,12 @@ AFRAME.registerSystem('main', {
     /**
      * Called on each scene tick.
      */
-    // tick: function (t) { },
+    tick: function (t) {
+
+
+
+
+    },
 
     /**
      * Called when entity pauses.
