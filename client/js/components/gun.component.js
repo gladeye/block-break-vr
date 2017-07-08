@@ -18,44 +18,19 @@ AFRAME.registerComponent('gun', {
   },
 
   createBullet: function() {
-
     var tip = document.querySelector('#player .gun-tip');
 
-    //var el = this.el;
-    var el = tip;
     var entity = document.createElement('a-entity');
-    var matrixWorld = el.object3D.matrixWorld;
-    var position = new THREE.Vector3();
-    var rotation = el.getAttribute('rotation');
-    var entityRotation;
+    entity.setAttribute('position', this.getInitialBulletPosition(tip));
+    entity.setAttribute('rotation', tip.object3D.rotation);
 
-    position.setFromMatrixPosition(matrixWorld);
-    entity.setAttribute('position', position);
-
-    // Have the spawned entity face the same direction as the entity.
-    // Allow the entity to further modify the inherited rotation.
-    position.setFromMatrixPosition(matrixWorld);
-    entity.setAttribute('position', position);
-    //entity.setAttribute('mixin', this.data.mixin);
-    entity.addEventListener('loaded', function () {
-      entityRotation = entity.getComputedAttribute('rotation');
-      entity.setAttribute('rotation', {
-        x: entityRotation.x + rotation.x,
-        y: entityRotation.y + rotation.y,
-        z: entityRotation.z + rotation.z
-      });
-    });
     entity.setAttribute('networked', 'template:' + this.data.bulletTemplate);
     entity.setAttribute('remove-in-seconds', 3);
-    entity.setAttribute('forward', 'speed:0.3');
-    el.sceneEl.appendChild(entity);
-
-
-    //el.setAttribute('position', this.getInitialBulletPosition(tip));
-    //el.setAttribute('rotation', this.getInitialBulletRotation(tip));
-
-   // var scene = document.querySelector('a-scene');
-    //scene.appendChild(el);
+    //entity.setAttribute('dynamic-body', 'shape','sphere');
+    //entity.setAttribute('dynamic-body', 'sphereRadius',0.1);
+    entity.setAttribute('forward', 'speed', 0.3);
+    entity.setAttribute('forward', 'directionEl', '#player .gun-tip');
+    tip.sceneEl.appendChild(entity);
   },
 
   getInitialBulletPosition: function(spawnerEl) {

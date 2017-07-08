@@ -1,7 +1,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Dev Example — Networked-Aframe</title>
+    <title>Block Break VR</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000">
@@ -16,7 +16,7 @@
 
 <a-scene main networked-scene="
       room: dev;
-      debug: true;
+      debug: false;
     " debug>
     <a-assets>
 
@@ -96,7 +96,7 @@
 
     <a-entity id="player" camera="userHeight: 1.6" networked="template:#avatar-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 1.6 0" universal-controls="movementControls: checkpoint, keyboard"
               checkpoint-controls="mode: teleport"
-              gun="bulletTemplate:#bullet-template; triggerKeyCode:17;">
+              gun="bulletTemplate:#bullet-template; triggerKeyCode:17;"
               kinematic-body="radius: 0.5; enableSlopes: false;"
               jump-ability>
         <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
