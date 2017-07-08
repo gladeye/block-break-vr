@@ -20,6 +20,10 @@
     " debug>
     <a-assets>
 
+
+      <a-asset-item id="bomb-obj" src="/assets/obj/exploding-bomb/model.obj"></a-asset-item>
+      <a-asset-item id="bomb-mtl" src="/assets/obj/exploding-bomb/materials.mtl"></a-asset-item>
+
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
         <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
 
@@ -75,6 +79,8 @@
 
         <!-- /Templates -->
     </a-assets>
+
+  <a-entity obj-model="obj: #bomb-obj; mtl: #bomb-mtl"></a-entity>
 
     <a-entity id="player" camera="userHeight: 1.6" networked="template:#avatar-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 1.6 0" universal-controls="movementControls: checkpoint, keyboard"
               checkpoint-controls="mode: teleport"
