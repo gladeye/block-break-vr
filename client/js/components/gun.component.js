@@ -34,7 +34,7 @@ AFRAME.registerComponent('gun', {
         //entity.setAttribute('sphere-collider', 'objects', '#environment-collision1,.voxel');
         sceneEl.appendChild(entity);
 
-        entity.addEventListener('hit', this.explode);
+        entity.addEventListener('hit', this.explode.bind(this));
     },
 
     getInitialBulletPosition: function (spawnerEl) {
@@ -62,16 +62,24 @@ AFRAME.registerComponent('gun', {
 
     explode: function (event) {
 
+        var hitEl = event.detail.el;
+        var bulletEl = event.target;
 
-
-        if(event.detail.el !== null){
-            var elClass = event.detail.el.getAttribute('class');
+        if(hitEl !== null){
+            var elClass = hitEl.getAttribute('class');
 
             //console.log('hit event', event.detail.el);
 
             switch(elClass){
                 case 'voxel':
-                    //TODO: spawn explosion at world coordinates
+
+                    //console.log('this: ',this);
+
+                    //console.log('event',event);
+                    //event.target.removeEventListener('hit',this.explode);
+                    bulletEl.parentNode.removeChild(bulletEl);
+                    //TODO: spawn explosion at world coordinates then delete the bomb
+                    //TODO: add logic to explosion to remove collided entities
                     console.log('Hit voxel');
                     break;
                 case 'bullet-collider':
