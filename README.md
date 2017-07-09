@@ -1,6 +1,16 @@
 # block-break-vr
 A multiplayer WebVR game where each side builds and defends their stronghold from the opposing team.
 
+[View Demo](https://gladeye.github.io/block-break-vr/) (Single-player only)
+
+Aim the cursor and click to place a block, jump and shoot your way to victory! Build and defend your fort while trying
+to destroy the opposing teams relic.
+
+## Controls
+
+*   Spacebar - Jump
+*   CTRL - Shoot
+
 ## Installation
 
 *   Run the following from the project root:
