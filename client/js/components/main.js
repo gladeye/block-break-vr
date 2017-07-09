@@ -32,7 +32,6 @@ if(typeof NAF !== 'undefined'){
 
 // Called by Networked-Aframe when connected to server
 function onConnect () {
-    console.log("onConnect");
     if(typeof NAF !== 'undefined'){
         NAF.entities.createAvatar('#avatar-template', '0 1.6 0', '0 0 0');
     }
@@ -62,7 +61,6 @@ AFRAME.registerSystem('main', {
         var extras = require('aframe-extras');
         extras.registerAll();
         extras.primitives.registerAll();
-        console.warn('Networked-Aframe development example. `npm run build` creates build.js');
 
         var sceneEl = document.querySelector('a-scene');
 
@@ -75,11 +73,10 @@ AFRAME.registerSystem('main', {
     },
 
     initNetworking: function () {
-        console.log('Initialized networking')
-
-
 
         //do stuff here after scene initializes
+
+        console.log('init networking');
 
         var self = this;
 
@@ -145,6 +142,31 @@ AFRAME.registerSystem('main', {
         }.bind(this));
 
         this.optimizeMobile();
+
+        //var gameFloor = document.querySelector('#environment-collision1');
+
+        // var gameFloorWidth = parseInt(gameFloor.getAttribute('width'));
+        // var gameFloorDepth = parseInt(gameFloor.getAttribute('depth'));
+
+        // var TeamOneRelic = {x: (gameFloorWidth/2)+(Math.floor(Math.Random * 2)+1), y: 2, z: (gameFloorDepth/2)+(Math.floor(Math.Random * 2)+1)};
+        // var TeamTwoRelic = {x: gameFloorWidth/2, y: 2, z: gameFloorDepth/2}; //(Math.floor(Math.random() * 2) + 1  )
+
+        var entity = document.createElement('a-entity');
+        entity.setAttribute('position', '-12 2 -12');
+        entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
+        entity.setAttribute('scale', '5 5 5');
+        entity.setAttribute('shadow', 'receive: false');
+        entity.setAttribute('static-body',  '');
+        sceneEl.appendChild(entity);
+
+        var entity = document.createElement('a-entity');
+        entity.setAttribute('position', '12 2 12');
+        entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
+        entity.setAttribute('scale', '5 5 5');
+        entity.setAttribute('shadow', 'receive: false');
+        entity.setAttribute('static-body',  '');
+        sceneEl.appendChild(entity);
+
     },
 
     playBlockSound: function(){
