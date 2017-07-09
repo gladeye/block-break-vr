@@ -93,11 +93,17 @@ AFRAME.registerComponent('gun', {
 
         //hitEl.setAttribute('sound','
 
-        hitEl.addEventListener('sound-ended',function(){
+
+
+        /*hitEl.addEventListener('sound-ended',function(){
             hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
-        });
+        });*/
 
         this.playExplodeSound(hitEl);
+
+        setTimeout(function(){
+            hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
+        },150);
 
 
 
