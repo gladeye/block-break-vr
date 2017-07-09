@@ -39,8 +39,6 @@ AFRAME.registerComponent('intersection-spawn-multi', {
 
     el.addEventListener(this.data.event, function(evt){
 
-      console.log('Click');
-
       var targetEl = evt.detail.intersectedEl;
       var targetElClass = targetEl.getAttribute('class');
 
@@ -51,6 +49,19 @@ AFRAME.registerComponent('intersection-spawn-multi', {
         pos.x   = Math.floor(pos.x / self.data.snap.x) * self.data.snap.x + self.data.offset.x;
         pos.y = Math.floor(pos.y / self.data.snap.y) * self.data.snap.y+ self.data.offset.y;
         pos.z = Math.floor(pos.z / self.data.snap.z) * self.data.snap.z + self.data.offset.z;
+
+        var existingVoxels = document.querySelectorAll('.voxel');
+        var seatsTaken = false;
+
+        for (var i = existingVoxels.length - 1; i >= 0; i--) {
+          var currentVoxelElPosition = existingVoxels[i].parentNode.parentNode.object3D.position;
+
+          if(currentVoxelElPosition.x == pos.x && currentVoxelElPosition.y == pos.y && currentVoxelElPosition.z == pos.z){
+            seatsTaken = true;
+          }
+        }
+
+        if(seatsTaken){ return; }
 
         var spawnEl = document.createElement('a-entity');
         spawnEl.setAttribute('networked', 'template', self.data.currenttemplate);

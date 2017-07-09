@@ -62,7 +62,6 @@ AFRAME.registerSystem('main', {
         var extras = require('aframe-extras');
         extras.registerAll();
         extras.primitives.registerAll();
-
         console.warn('Networked-Aframe development example. `npm run build` creates build.js');
 
         var sceneEl = document.querySelector('a-scene');
@@ -119,6 +118,8 @@ AFRAME.registerSystem('main', {
 
         cursorEl.addEventListener('spawnEvent',function(e){
 
+            this.playBlockSound();
+
             /*var voxelEl = e.detail.target.childNodes[0];
 
             console.log('Spawned voxel from network', voxelEl);
@@ -141,9 +142,20 @@ AFRAME.registerSystem('main', {
 
 
 
-        });
+        }.bind(this));
 
         this.optimizeMobile();
+    },
+
+    playBlockSound: function(){
+        var soundArray = ['#pop1-sound','#pop2-sound','#pop3-sound','#pop4-sound','#pop5-sound','#pop6-sound','#pop7-sound'];
+        var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+
+        var blockSoundEmitter = document.querySelector('#block-sound-emitter');
+
+        blockSoundEmitter.setAttribute('sound','src',soundArray[randomKey]);
+
+        blockSoundEmitter.components.sound.playSound();
     },
 
     /**
