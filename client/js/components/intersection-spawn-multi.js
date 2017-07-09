@@ -53,11 +53,13 @@ AFRAME.registerComponent('intersection-spawn-multi', {
         var existingVoxels = document.querySelectorAll('.voxel');
         var seatsTaken = false;
 
-        for (var i = existingVoxels.length - 1; i >= 0; i--) {
-          var currentVoxelElPosition = existingVoxels[i].parentNode.parentNode.object3D.position;
+        if(existingVoxels >= 1){
+          for (var i = existingVoxels.length - 1; i >= 0; i--) {
+            var currentVoxelElPosition = existingVoxels[i].parentNode.parentNode.object3D.position;
 
-          if(currentVoxelElPosition.x == pos.x && currentVoxelElPosition.y == pos.y && currentVoxelElPosition.z == pos.z){
-            seatsTaken = true;
+            if(currentVoxelElPosition.x == pos.x && currentVoxelElPosition.y == pos.y && currentVoxelElPosition.z == pos.z){
+              seatsTaken = true;
+            }
           }
         }
 
