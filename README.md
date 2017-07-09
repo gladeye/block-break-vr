@@ -78,3 +78,11 @@ npm install
     npm run prod
     ```
     Open your browser to http://YOUR_IP:8080 to view the project.
+
+### Updating GitHub Pages
+
+*   Run the following to update GitHub pages with a static build based on the current local branch:
+
+    ```
+    npm run ghpages
+    ```
