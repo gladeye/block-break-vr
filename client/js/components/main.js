@@ -157,6 +157,7 @@ AFRAME.registerSystem('main', {
         entity.setAttribute('scale', '5 5 5');
         entity.setAttribute('shadow', 'receive: false');
         entity.setAttribute('static-body',  '');
+        entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
         sceneEl.appendChild(entity);
 
         var entity = document.createElement('a-entity');
@@ -165,6 +166,7 @@ AFRAME.registerSystem('main', {
         entity.setAttribute('scale', '5 5 5');
         entity.setAttribute('shadow', 'receive: false');
         entity.setAttribute('static-body',  '');
+        entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
         sceneEl.appendChild(entity);
 
     },
