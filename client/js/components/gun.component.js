@@ -71,10 +71,15 @@ AFRAME.registerComponent('gun', {
 
         if(hitEl !== null){
             var elClass = hitEl.getAttribute('class');
+            console.log('hitEl', hitEl);
             switch(elClass){
                 case 'voxel':
 
                     this.destroyVoxel(hitEl,bulletEl);
+                    break;
+                case 'relic':
+                    this.el.emit('relic-hit');
+                    console.log('u shot my relic!');
                     break;
                 case 'bullet-collider':
                     console.log('Hit bullet-collider');

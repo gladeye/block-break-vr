@@ -126,7 +126,7 @@
     </a-assets>
         <!-- Bullet -->
         <script id="bullet-template" type="text/html">
-          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects:.voxel; watch: false; radius: 0.01">
+          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects: .voxel, .relic; watch: false; radius: 0.01">
             <a-animation attribute="rotation" to="360 0 0" easing="linear" dur="1000" repeat="indefinite"></a-animation>
           </a-entity> 
         </script>
@@ -141,7 +141,7 @@
                   position="0 0 -1"
                   geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03;"
                   material="color: black; shader: flat"
-                  raycaster="objects: .checkpoint, #environment-collision1, .voxel"
+                  raycaster="objects: .checkpoint, #environment-collision1, .voxel, .relic"
                   intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1">
             <a-animation begin="click" attribute="material.color" from="red" to="black" dur="0" dur="250"></a-animation>
             <a-animation begin="click" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>

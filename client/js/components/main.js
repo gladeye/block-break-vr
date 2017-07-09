@@ -151,24 +151,51 @@ AFRAME.registerSystem('main', {
         // var TeamOneRelic = {x: (gameFloorWidth/2)+(Math.floor(Math.Random * 2)+1), y: 2, z: (gameFloorDepth/2)+(Math.floor(Math.Random * 2)+1)};
         // var TeamTwoRelic = {x: gameFloorWidth/2, y: 2, z: gameFloorDepth/2}; //(Math.floor(Math.random() * 2) + 1  )
 
+
+        var parentEntity = document.createElement('a-entity');
+        parentEntity.setAttribute('position', '12 2 12');
+
+        var emptyEntity = document.createElement('a-entity');
+        emptyEntity.setAttribute('class', 'relic');
+        emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
+        emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
+        emptyEntity.setAttribute('static-body', '');
+
+                    
         var entity = document.createElement('a-entity');
-        entity.setAttribute('position', '-12 2 -12');
+        entity.setAttribute('class', 'relic');
         entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
         entity.setAttribute('scale', '5 5 5');
         entity.setAttribute('shadow', 'receive: false');
         entity.setAttribute('static-body',  '');
         entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
-        sceneEl.appendChild(entity);
+        parentEntity.appendChild(entity);
+        parentEntity.appendChild(emptyEntity);
+        sceneEl.appendChild(parentEntity);
+
+        var parentEntity = document.createElement('a-entity');
+        parentEntity.setAttribute('position', '-12 2 -12');
+
+        var emptyEntity = document.createElement('a-entity');
+        emptyEntity.setAttribute('class', 'relic');
+        emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
+        emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
+        emptyEntity.setAttribute('static-body', '');
 
         var entity = document.createElement('a-entity');
-        entity.setAttribute('position', '12 2 12');
+        entity.setAttribute('class', 'relic');
         entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
         entity.setAttribute('scale', '5 5 5');
         entity.setAttribute('shadow', 'receive: false');
         entity.setAttribute('static-body',  '');
         entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
-        sceneEl.appendChild(entity);
+        parentEntity.appendChild(entity);
+        parentEntity.appendChild(emptyEntity);
+        sceneEl.appendChild(parentEntity); 
 
+
+        var playerEl = document.getElementById('player');
+        playerEl.addEventListener('relic-hit', this.onRelicHit);
     },
 
     playBlockSound: function(){
@@ -215,6 +242,22 @@ AFRAME.registerSystem('main', {
      * Use to continue or add any dynamic or background behavior such as events.
      */
     play: function () { },
+
+    onRelicHit: function(){ 
+        console.log('fired from relic-hit event');
+
+        var voxelsInScene = document.querySelectorAll('.voxel');
+
+        console.log('voxelsInScene', voxelsInScene);
+
+        if(voxelsInScene.length >= 1){
+            console.log('voxels are in the scene');
+            for (var i = voxelsInScene.length - 1; i >= 0; i--) {
+                console.log('voxelsInScene[i].parentNode', voxelsInScene[i].parentNode);
+                voxelsInScene[i].parentNode.parentNode.removeChild(voxelsInScene[i].parentNode);   
+            }
+        }
+    },
 
     optimizeMobile: function () {
         // On mobile remove elements that are resource heavy
