@@ -24,17 +24,24 @@
       <a-asset-item id="bomb-obj" src="assets/obj/exploding-bomb/model.obj"></a-asset-item>
       <a-asset-item id="bomb-mtl" src="assets/obj/exploding-bomb/materials.mtl"></a-asset-item>
 
+      <a-asset-item id="block-obj" src="assets/obj/basic-block/model.obj"></a-asset-item>
+      <a-asset-item id="block-mtl" src="assets/obj/basic-block/materials.mtl"></a-asset-item>
+
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
         <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
 
         <!-- Templates -->
 
         <script id="greystone-block-template" type="text/html">
-            <a-entity class="voxel"
-                      geometry="primitive: box; height: 1; width: 1; depth: 1"
-                      material="src: #greystone-texture; shader: standard; roughness: 1; metalness: 0; wireframe: false;"
-                      grab shadow="receive: false"
-                      static-body
+          <a-entity class="voxel"
+                    material="transparent: true; opacity: 0;"
+                    geometry="primitive: box; height: 1; width: 1; depth: 1"
+                    ></a-entity>
+          <a-entity class="voxel"
+                    obj-model="obj: #block-obj; mtl: #block-mtl"
+                    scale="12 12 12"
+                    grab shadow="receive: false"
+                    static-body
                     ></a-entity>
         </script>
 
@@ -130,6 +137,7 @@
     </a-entity>
 
     <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>
+
 
 </a-scene>
 
