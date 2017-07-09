@@ -27,6 +27,9 @@
       <a-asset-item id="block-obj" src="assets/obj/basic-block/model.obj"></a-asset-item>
       <a-asset-item id="block-mtl" src="assets/obj/basic-block/materials.mtl"></a-asset-item>
 
+      <a-asset-item id="mr-block-obj" src="assets/obj/mr-block/model.obj"></a-asset-item>
+      <a-asset-item id="mr-block-mtl" src="assets/obj/mr-block/materials.mtl"></a-asset-item>
+
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
         <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
 
@@ -38,8 +41,8 @@
                     geometry="primitive: box; height: 1; width: 1; depth: 1"
                     ></a-entity>
           <a-entity class="voxel"
-                    obj-model="obj: #block-obj; mtl: #block-mtl"
-                    scale="12 12 12" 
+                    obj-model="obj: #mr-block-obj; mtl: #mr-block-mtl"
+                    scale="5 5 5" 
                     shadow="receive: false"
                     static-body
                     ></a-entity>
@@ -137,7 +140,12 @@
     </a-entity>
 
     <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>
-
+          
+          <a-entity class="voxel"
+                    material=""
+                    geometry="primitive: box; height: 1; width: 1; depth: 1"
+                    position="0 1 0"
+                    ></a-entity>
 
 </a-scene>
 
