@@ -85,6 +85,10 @@ AFRAME.registerComponent('gun', {
 
     createBullet: function () {
         var tip = document.querySelector('#player .gun-tip');
+
+        this.playGunSound(tip);
+
+
         var sceneEl = tip.sceneEl;
 
         var entity = document.createElement('a-entity');
@@ -100,7 +104,7 @@ AFRAME.registerComponent('gun', {
         //entity.setAttribute('sphere-collider', 'objects', '#environment-collision1,.voxel');
         sceneEl.appendChild(entity);
 
-        entity.addEventListener('hit', this.explode.bind(this));
+        entity.addEventListener('hit', this.onBulletHit.bind(this));
     },
 
     getInitialBulletPosition: function (spawnerEl) {
@@ -126,27 +130,22 @@ AFRAME.registerComponent('gun', {
         rad.set(THREE.Math.radToDeg(rad.x), THREE.Math.radToDeg(rad.y), THREE.Math.radToDeg(rad.z));
     },
 
-    explode: function (event) {
+    onBulletHit: function (event) {
 
         var hitEl = event.detail.el;
         var bulletEl = event.target;
 
         if(hitEl !== null){
             var elClass = hitEl.getAttribute('class');
+            console.log('hitEl', hitEl);
             switch(elClass){
                 case 'voxel':
 
-                    console.log('HitEl: ',hitEl);
-
-                    console.log('ChildNodes: ',hitEl.parentNode.childNodes);
-
-                    //TODO: loop through voxels in scene and set their dynamic-body only if their z and x position match the deleted voxel
-
-                    hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
-                    bulletEl.parentNode.removeChild(bulletEl);
-                    //TODO: spawn explosion at world coordinates then delete the bomb
-                    //TODO: add logic to explosion to remove collided entities
-                    console.log('Hit voxel');
+                    this.destroyVoxel(hitEl,bulletEl);
+                    break;
+                case 'relic':
+                    this.el.emit('relic-hit');
+                    console.log('Hit relic');
                     break;
                 case 'bullet-collider':
                     console.log('Hit bullet-collider');
@@ -154,7 +153,57 @@ AFRAME.registerComponent('gun', {
             }
 
         }
+    },
+
+    destroyVoxel: function (hitEl,bulletEl) {
+        console.log('HitEl: ',hitEl);
+
+        console.log('ChildNodes: ',hitEl.parentNode.childNodes);
+
+        //TODO: loop through voxels in scene and set their dynamic-body only if their z and x position match the deleted voxel
+
+        //hitEl.setAttribute('sound','
+
+
+
+        /*hitEl.addEventListener('sound-ended',function(){
+            hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
+        });*/
+
+        this.playExplodeSound(hitEl);
+
+        setTimeout(function(){
+            hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
+        },150);
+
+
+
+        bulletEl.parentNode.removeChild(bulletEl);
+
+        //TODO: spawn explosion at world coordinates then delete the bomb
+        //TODO: add logic to explosion to remove collided entities
+        console.log('Hit voxel');
+    },
+
+    playGunSound: function(tipEl) {
+
+        var soundArray = ['#blip0-sound','#blip1-sound','#blip2-sound'];
+        var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+
+        tipEl.setAttribute('sound','src',soundArray[randomKey]);
+
+        tipEl.components.sound.playSound();
+    },
+
+    playExplodeSound: function(hitEl) {
+        var soundArray = ['#explode0-sound','#explode1-sound','#explode2-sound','#explode3-sound'];
+        var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+
+        hitEl.setAttribute('sound','src',soundArray[randomKey]);
+
+        hitEl.components.sound.playSound();
     }
+
 });
 },{}],4:[function(require,module,exports){
 /**
@@ -212,11 +261,13 @@ AFRAME.registerComponent('intersection-spawn-multi', {
         var existingVoxels = document.querySelectorAll('.voxel');
         var seatsTaken = false;
 
-        for (var i = existingVoxels.length - 1; i >= 0; i--) {
-          var currentVoxelElPosition = existingVoxels[i].parentNode.parentNode.object3D.position;
+        if(existingVoxels.length >= 1){
+          for (var i = existingVoxels.length - 1; i >= 0; i--) {
+            var currentVoxelElPosition = existingVoxels[i].parentNode.parentNode.object3D.position;
 
-          if(currentVoxelElPosition.x == pos.x && currentVoxelElPosition.y == pos.y && currentVoxelElPosition.z == pos.z){
-            seatsTaken = true;
+            if(currentVoxelElPosition.x == pos.x && currentVoxelElPosition.y == pos.y && currentVoxelElPosition.z == pos.z){
+              seatsTaken = true;
+            }
           }
         }
 
@@ -275,7 +326,6 @@ if(typeof NAF !== 'undefined'){
 
 // Called by Networked-Aframe when connected to server
 function onConnect () {
-    console.log("onConnect");
     if(typeof NAF !== 'undefined'){
         NAF.entities.createAvatar('#avatar-template', '0 1.6 0', '0 0 0');
     }
@@ -305,7 +355,6 @@ AFRAME.registerSystem('main', {
         var extras = require('aframe-extras');
         extras.registerAll();
         extras.primitives.registerAll();
-        console.warn('Networked-Aframe development example. `npm run build` creates build.js');
 
         var sceneEl = document.querySelector('a-scene');
 
@@ -318,11 +367,10 @@ AFRAME.registerSystem('main', {
     },
 
     initNetworking: function () {
-        console.log('Initialized networking')
-
-
 
         //do stuff here after scene initializes
+
+        console.log('init networking');
 
         var self = this;
 
@@ -388,6 +436,60 @@ AFRAME.registerSystem('main', {
         }.bind(this));
 
         this.optimizeMobile();
+
+        //var gameFloor = document.querySelector('#environment-collision1');
+
+        // var gameFloorWidth = parseInt(gameFloor.getAttribute('width'));
+        // var gameFloorDepth = parseInt(gameFloor.getAttribute('depth'));
+
+        // var TeamOneRelic = {x: (gameFloorWidth/2)+(Math.floor(Math.Random * 2)+1), y: 2, z: (gameFloorDepth/2)+(Math.floor(Math.Random * 2)+1)};
+        // var TeamTwoRelic = {x: gameFloorWidth/2, y: 2, z: gameFloorDepth/2}; //(Math.floor(Math.random() * 2) + 1  )
+
+
+        var parentEntity = document.createElement('a-entity');
+        parentEntity.setAttribute('position', '12 2 12');
+
+        var emptyEntity = document.createElement('a-entity');
+        emptyEntity.setAttribute('class', 'relic');
+        emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
+        emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
+        emptyEntity.setAttribute('static-body', '');
+
+                    
+        var entity = document.createElement('a-entity');
+        entity.setAttribute('class', 'relic');
+        entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
+        entity.setAttribute('scale', '5 5 5');
+        entity.setAttribute('shadow', 'receive: false');
+        entity.setAttribute('static-body',  '');
+        entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
+        parentEntity.appendChild(entity);
+        parentEntity.appendChild(emptyEntity);
+        sceneEl.appendChild(parentEntity);
+
+        var parentEntity = document.createElement('a-entity');
+        parentEntity.setAttribute('position', '-12 2 -12');
+
+        var emptyEntity = document.createElement('a-entity');
+        emptyEntity.setAttribute('class', 'relic');
+        emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
+        emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
+        emptyEntity.setAttribute('static-body', '');
+
+        var entity = document.createElement('a-entity');
+        entity.setAttribute('class', 'relic');
+        entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
+        entity.setAttribute('scale', '5 5 5');
+        entity.setAttribute('shadow', 'receive: false');
+        entity.setAttribute('static-body',  '');
+        entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
+        parentEntity.appendChild(entity);
+        parentEntity.appendChild(emptyEntity);
+        sceneEl.appendChild(parentEntity); 
+
+
+        var playerEl = document.getElementById('player');
+        playerEl.addEventListener('relic-hit', this.onRelicHit.bind(this));
     },
 
     playBlockSound: function(){
@@ -434,6 +536,73 @@ AFRAME.registerSystem('main', {
      * Use to continue or add any dynamic or background behavior such as events.
      */
     play: function () { },
+
+    onRelicHit: function(){ 
+        console.log('fired from relic-hit event');
+
+        this.gameOver();
+
+
+    },
+
+    gameOver: function () {
+
+
+        //remove all voxels
+        var voxelsInScene = document.querySelectorAll('.voxel');
+
+        console.log('voxelsInScene', voxelsInScene);
+
+        if(voxelsInScene.length >= 1){
+            console.log('voxels are in the scene');
+            for (var i = voxelsInScene.length - 1; i >= 0; i--) {
+                console.log('voxelsInScene[i].parentNode', voxelsInScene[i].parentNode);
+                voxelsInScene[i].parentNode.parentNode.removeChild(voxelsInScene[i].parentNode);
+                //voxelsInScene[i].setAttribute('dynamic-body','');
+            }
+        }
+
+        /*var environmentCollisionEl = document.getElementById('environment-collision1');
+
+        var playerEl = document.getElementById('player');
+
+        playerEl.removeAttribute('kinematic-body');
+        environmentCollisionEl.removeAttribute('static-body');
+
+        setTimeout(function(){
+            environmentCollisionEl.setAttribute('dynamic-body');
+        },500);*/
+
+
+
+
+        //play game over music
+
+        this.playGameOverMusic();
+
+
+
+    },
+
+    playGameOverMusic: function () {
+        var bgMusicEl = document.getElementById('bg-music-emitter');
+
+        bgMusicEl.setAttribute('sound','src','#game-over-music');
+        bgMusicEl.setAttribute('sound','loop',false);
+
+        bgMusicEl.addEventListener('sound-ended',this.playBuildMusic);
+
+        bgMusicEl.components['sound'].play();
+    },
+
+    playBuildMusic: function () {
+        var bgMusicEl = document.getElementById('bg-music-emitter');
+        bgMusicEl.setAttribute('sound','src','#build-music');
+        bgMusicEl.setAttribute('sound','loop',true);
+        bgMusicEl.components['sound'].play();
+
+        bgMusicEl.removeEventListener('sound-ended',this.playBuildMusic);
+    },
 
     optimizeMobile: function () {
         // On mobile remove elements that are resource heavy

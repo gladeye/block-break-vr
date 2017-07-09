@@ -29,7 +29,14 @@
       <a-asset-item id="mr-block-obj" src="assets/obj/mr-block/model.obj"></a-asset-item>
       <a-asset-item id="mr-block-mtl" src="assets/obj/mr-block/materials.mtl"></a-asset-item>
 
-        <audio id="build-music" src="assets/ogg/Change_Management_looped.ogg"></audio>
+      <a-asset-item id="relic-obj" src="assets/obj/relic/model.obj"></a-asset-item>
+      <a-asset-item id="relic-mtl" src="assets/obj/relic/materials.mtl"></a-asset-item>
+
+      <a-asset-item id="crystal-block-obj" src="assets/obj/crystal-block/model.obj"></a-asset-item>
+      <a-asset-item id="crystal-block-mtl" src="assets/obj/crystal-block/materials.mtl"></a-asset-item>
+
+        <audio id="build-music" src="assets/ogg/Build-Phase_looped.ogg"></audio>
+        <audio id="game-over-music" src="assets/ogg/You_Win.ogg"></audio>
         <audio id="pop1-sound" src="assets/ogg/240566__onikage22__blip-plock-pop1.ogg"></audio>
         <audio id="pop2-sound" src="assets/ogg/240566__onikage22__blip-plock-pop2.ogg"></audio>
         <audio id="pop3-sound" src="assets/ogg/240566__onikage22__blip-plock-pop3.ogg"></audio>
@@ -37,6 +44,19 @@
         <audio id="pop5-sound" src="assets/ogg/240566__onikage22__blip-plock-pop5.ogg"></audio>
         <audio id="pop6-sound" src="assets/ogg/240566__onikage22__blip-plock-pop6.ogg"></audio>
         <audio id="pop7-sound" src="assets/ogg/240566__onikage22__blip-plock-pop7.ogg"></audio>
+
+        <audio id="explode0-sound" src="assets/ogg/170146__timgormly__8-bit-explosion0.ogg"></audio>
+        <audio id="explode1-sound" src="assets/ogg/162792__timgormly__8-bit-explosion1.ogg"></audio>
+        <audio id="explode2-sound" src="assets/ogg/170144__timgormly__8-bit-explosion2.ogg"></audio>
+        <audio id="explode3-sound" src="assets/ogg/170145__timgormly__8-bit-explosion3.ogg"></audio>
+
+        <audio id="blip0-sound" src="assets/ogg/344297__musiclegends__blip-select46.ogg"></audio>
+        <audio id="blip1-sound" src="assets/ogg/344298__musiclegends__blip-select35.ogg"></audio>
+        <audio id="blip2-sound" src="assets/ogg/344299__musiclegends__blip-select11.ogg"></audio>
+
+        <audio id="jump0-sound" src="assets/ogg/344304__musiclegends__jump20.ogg"></audio>
+        <audio id="jump1-sound" src="assets/ogg/344305__musiclegends__jump14.ogg"></audio>
+
 
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
         <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
@@ -47,12 +67,13 @@
           <a-entity class="voxel"
                     material="transparent: true; opacity: 0;"
                     geometry="primitive: box; height: 1; width: 1; depth: 1"
+                    static-body
+                    sound="src: #explode0-sound; autoplay: false; loop: false; poolSize: 1;"
                     ></a-entity>
-          <a-entity class="voxel"
+          <a-entity
                     obj-model="obj: #mr-block-obj; mtl: #mr-block-mtl"
                     scale="5 5 5" 
                     shadow="receive: false"
-                    static-body
                     ></a-entity>
         </script>
 
@@ -98,6 +119,7 @@
                             ></a-box>
                     <a-entity id="gun-tip" class="gun-tip"
                               position="0.51 -0.10 -0.64"
+                              sound="src: #blip0-sound; autoplay: false; loop: false; poolSize: 5; volume: 0.5"
                             ></a-entity>
                 </a-entity>
             </a-entity>
@@ -109,7 +131,7 @@
     </a-assets>
         <!-- Bullet -->
         <script id="bullet-template" type="text/html">
-          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects:.voxel; watch: false; radius: 0.01">
+          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects: .voxel, .relic; watch: false; radius: 0.01">
             <a-animation attribute="rotation" to="360 0 0" easing="linear" dur="1000" repeat="indefinite"></a-animation>
           </a-entity> 
         </script>
@@ -118,13 +140,14 @@
               checkpoint-controls="mode: teleport"
               gun="bulletTemplate:#bullet-template; triggerKeyCode:17;"
               kinematic-body="radius: 0.5; enableSlopes: false;"
-              jump-ability
+              jump-ability="maxJumps: 2;"
+              sound="src: #jump0-sound; autoplay: false; loop: false; poolSize: 5; positional: true;"
             auto-fall-respawn>
         <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
                   position="0 0 -1"
                   geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03;"
                   material="color: black; shader: flat"
-                  raycaster="objects: .checkpoint, #environment-collision1, .voxel"
+                  raycaster="objects: .checkpoint, #environment-collision1, .voxel, .relic"
                   intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1">
             <a-animation begin="click" attribute="material.color" from="red" to="black" dur="0" dur="250"></a-animation>
             <a-animation begin="click" attribute="scale" from="0.7 0.7 0.7" to="1 1 1" dur="0" dur="250"></a-animation>
@@ -150,9 +173,8 @@
 
     <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>
 
-    <a-entity id="build-music" sound="src: #build-music; autoplay: true; loop: true; positional: false"></a-entity>
+    <a-entity id="bg-music-emitter" sound="src: #build-music; autoplay: true; loop: true; positional: false"></a-entity>
     <a-entity id="block-sound-emitter" sound="src: #pop1-sound; autoplay: false; loop: false; poolSize: 5; positional: false;" position="0 0 -1"></a-entity>
-
 
 </a-scene>
 
