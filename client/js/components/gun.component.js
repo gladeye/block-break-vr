@@ -79,7 +79,7 @@ AFRAME.registerComponent('gun', {
                     break;
                 case 'relic':
                     this.el.emit('relic-hit');
-                    console.log('u shot my relic!');
+                    console.log('Hit relic');
                     break;
                 case 'bullet-collider':
                     console.log('Hit bullet-collider');

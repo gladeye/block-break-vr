@@ -195,7 +195,7 @@ AFRAME.registerSystem('main', {
 
 
         var playerEl = document.getElementById('player');
-        playerEl.addEventListener('relic-hit', this.onRelicHit);
+        playerEl.addEventListener('relic-hit', this.onRelicHit.bind(this));
     },
 
     playBlockSound: function(){
@@ -246,6 +246,15 @@ AFRAME.registerSystem('main', {
     onRelicHit: function(){ 
         console.log('fired from relic-hit event');
 
+        this.gameOver();
+
+
+    },
+
+    gameOver: function () {
+
+
+        //remove all voxels
         var voxelsInScene = document.querySelectorAll('.voxel');
 
         console.log('voxelsInScene', voxelsInScene);
@@ -254,9 +263,51 @@ AFRAME.registerSystem('main', {
             console.log('voxels are in the scene');
             for (var i = voxelsInScene.length - 1; i >= 0; i--) {
                 console.log('voxelsInScene[i].parentNode', voxelsInScene[i].parentNode);
-                voxelsInScene[i].parentNode.parentNode.removeChild(voxelsInScene[i].parentNode);   
+                voxelsInScene[i].parentNode.parentNode.removeChild(voxelsInScene[i].parentNode);
+                //voxelsInScene[i].setAttribute('dynamic-body','');
             }
         }
+
+        /*var environmentCollisionEl = document.getElementById('environment-collision1');
+
+        var playerEl = document.getElementById('player');
+
+        playerEl.removeAttribute('kinematic-body');
+        environmentCollisionEl.removeAttribute('static-body');
+
+        setTimeout(function(){
+            environmentCollisionEl.setAttribute('dynamic-body');
+        },500);*/
+
+
+
+
+        //play game over music
+
+        this.playGameOverMusic();
+
+
+
+    },
+
+    playGameOverMusic: function () {
+        var bgMusicEl = document.getElementById('bg-music-emitter');
+
+        bgMusicEl.setAttribute('sound','src','#game-over-music');
+        bgMusicEl.setAttribute('sound','loop',false);
+
+        bgMusicEl.addEventListener('sound-ended',this.playBuildMusic);
+
+        bgMusicEl.components['sound'].play();
+    },
+
+    playBuildMusic: function () {
+        var bgMusicEl = document.getElementById('bg-music-emitter');
+        bgMusicEl.setAttribute('sound','src','#build-music');
+        bgMusicEl.setAttribute('sound','loop',true);
+        bgMusicEl.components['sound'].play();
+
+        bgMusicEl.removeEventListener('sound-ended',this.playBuildMusic);
     },
 
     optimizeMobile: function () {
