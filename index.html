@@ -24,17 +24,24 @@
       <a-asset-item id="bomb-obj" src="assets/obj/exploding-bomb/model.obj"></a-asset-item>
       <a-asset-item id="bomb-mtl" src="assets/obj/exploding-bomb/materials.mtl"></a-asset-item>
 
+      <a-asset-item id="block-obj" src="assets/obj/basic-block/model.obj"></a-asset-item>
+      <a-asset-item id="block-mtl" src="assets/obj/basic-block/materials.mtl"></a-asset-item>
+
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
         <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
 
         <!-- Templates -->
 
         <script id="greystone-block-template" type="text/html">
-            <a-entity class="voxel"
-                      geometry="primitive: box; height: 1; width: 1; depth: 1"
-                      material="src: #greystone-texture; shader: standard; roughness: 1; metalness: 0; wireframe: false;"
-                      grab shadow="receive: false"
-                      static-body
+          <a-entity class="voxel"
+                    material="transparent: true; opacity: 0;"
+                    geometry="primitive: box; height: 1; width: 1; depth: 1"
+                    ></a-entity>
+          <a-entity class="voxel"
+                    obj-model="obj: #block-obj; mtl: #block-mtl"
+                    scale="12 12 12" 
+                    shadow="receive: false"
+                    static-body
                     ></a-entity>
         </script>
 
@@ -91,7 +98,9 @@
     </a-assets>
         <!-- Bullet -->
         <script id="bullet-template" type="text/html">
-          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl"></a-entity> 
+          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects:.voxel; watch: false; radius: 0.01">
+            <a-animation attribute="rotation" to="360 0 0" easing="linear" dur="1000" repeat="indefinite"></a-animation>
+          </a-entity> 
         </script>
 
     <a-entity id="player" camera="userHeight: 1.6" networked="template:#avatar-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 1.6 0" universal-controls="movementControls: checkpoint, keyboard"
@@ -120,11 +129,15 @@
 
     </a-entity>
 
+    <a-box id="bullet-collider" class="bullet-collider" position="0 -0.5 0" width="30" depth="30" height="1"></a-box>
+
+
     <a-entity visible="true" position="0 -15 0">
-        <a-box id="environment-collision1" static-body position="0 0 0" width="30" depth="30" height="30"></a-box>
+        <a-box id="environment-collision1" class="environment" static-body position="0 0 0" width="30" depth="30" height="30"></a-box>
     </a-entity>
 
     <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>
+
 
 </a-scene>
 

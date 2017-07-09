@@ -46,62 +46,96 @@ AFRAME.registerComponent('forward', {
 });
 },{}],2:[function(require,module,exports){
 AFRAME.registerComponent('gun', {
-  schema: {
-    bulletTemplate: {default: '#bullet-template'},
-    triggerKeyCode: {default: 32} // spacebar
-  },
+    schema: {
+        bulletTemplate: {default: '#bullet-template'},
+        triggerKeyCode: {default: 32} // spacebar
+    },
 
-  init: function() {
-    var that = this;
-    document.body.onkeyup = function(e){
-      if(e.keyCode == that.data.triggerKeyCode){
-        that.shoot();
-      }
+    init: function () {
+        var that = this;
+        document.body.onkeyup = function (e) {
+            if (e.keyCode == that.data.triggerKeyCode) {
+                that.shoot();
+            }
+        }
+    },
+
+    shoot: function () {
+        this.createBullet();
+    },
+
+    createBullet: function () {
+        var tip = document.querySelector('#player .gun-tip');
+        var sceneEl = tip.sceneEl;
+
+        var entity = document.createElement('a-entity');
+        entity.setAttribute('position', this.getInitialBulletPosition(tip));
+        entity.setAttribute('rotation', tip.object3D.rotation);
+
+        entity.setAttribute('networked', 'template:' + this.data.bulletTemplate);
+        entity.setAttribute('remove-in-seconds', 3);
+        //entity.setAttribute('dynamic-body', 'shape','sphere');
+        //entity.setAttribute('dynamic-body', 'sphereRadius',0.1);
+        entity.setAttribute('forward', 'speed', 0.3);
+        entity.setAttribute('forward', 'directionEl', '#player .gun-tip');
+        //entity.setAttribute('sphere-collider', 'objects', '#environment-collision1,.voxel');
+        sceneEl.appendChild(entity);
+
+        entity.addEventListener('hit', this.explode.bind(this));
+    },
+
+    getInitialBulletPosition: function (spawnerEl) {
+        var position = spawnerEl.getAttribute('position');
+
+        var worldPos = new THREE.Vector3();
+        worldPos.setFromMatrixPosition(spawnerEl.object3D.matrixWorld);
+
+        return worldPos;
+    },
+
+    getInitialBulletRotation: function (spawnerEl) {
+        var worldDirection = new THREE.Vector3();
+
+        spawnerEl.object3D.getWorldDirection(worldDirection);
+        worldDirection.multiplyScalar(-1);
+        this.vec3RadToDeg(worldDirection);
+
+        return worldDirection;
+    },
+
+    vec3RadToDeg: function (rad) {
+        rad.set(THREE.Math.radToDeg(rad.x), THREE.Math.radToDeg(rad.y), THREE.Math.radToDeg(rad.z));
+    },
+
+    explode: function (event) {
+
+        var hitEl = event.detail.el;
+        var bulletEl = event.target;
+
+        if(hitEl !== null){
+            var elClass = hitEl.getAttribute('class');
+            switch(elClass){
+                case 'voxel':
+
+                    console.log('HitEl: ',hitEl);
+
+                    console.log('ChildNodes: ',hitEl.parentNode.childNodes);
+
+                    //TODO: loop through voxels in scene and set their dynamic-body only if their z and x position match the deleted voxel
+
+                    hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
+                    bulletEl.parentNode.removeChild(bulletEl);
+                    //TODO: spawn explosion at world coordinates then delete the bomb
+                    //TODO: add logic to explosion to remove collided entities
+                    console.log('Hit voxel');
+                    break;
+                case 'bullet-collider':
+                    console.log('Hit bullet-collider');
+                    break;
+            }
+
+        }
     }
-  },
-
-  shoot: function() {
-    this.createBullet();
-  },
-
-  createBullet: function() {
-    var tip = document.querySelector('#player .gun-tip');
-
-    var entity = document.createElement('a-entity');
-    entity.setAttribute('position', this.getInitialBulletPosition(tip));
-    entity.setAttribute('rotation', tip.object3D.rotation);
-
-    entity.setAttribute('networked', 'template:' + this.data.bulletTemplate);
-    entity.setAttribute('remove-in-seconds', 3);
-    //entity.setAttribute('dynamic-body', 'shape','sphere');
-    //entity.setAttribute('dynamic-body', 'sphereRadius',0.1);
-    entity.setAttribute('forward', 'speed', 0.3);
-    entity.setAttribute('forward', 'directionEl', '#player .gun-tip');
-    tip.sceneEl.appendChild(entity);
-  },
-
-  getInitialBulletPosition: function(spawnerEl) {
-    var position = spawnerEl.getAttribute('position');
-
-    var worldPos = new THREE.Vector3();
-    worldPos.setFromMatrixPosition(spawnerEl.object3D.matrixWorld);
-
-    return worldPos;
-  },
-
-  getInitialBulletRotation: function(spawnerEl) {
-    var worldDirection = new THREE.Vector3();
-
-    spawnerEl.object3D.getWorldDirection(worldDirection);
-    worldDirection.multiplyScalar(-1);
-    this.vec3RadToDeg(worldDirection);
-
-    return worldDirection;
-  },
-
-  vec3RadToDeg: function(rad) {
-    rad.set(THREE.Math.radToDeg(rad.x), THREE.Math.radToDeg(rad.y), THREE.Math.radToDeg(rad.z));
-  }
 });
 },{}],3:[function(require,module,exports){
 /**
@@ -94474,7 +94508,7 @@ module.exports={
     "/aframe-physics-system"
   ],
   "_resolved": "git://github.com/donmccurdy/cannon.js.git#022e8ba53fa83abf0ad8a0e4fd08623123838a17",
-  "_shasum": "404c698459f021e66dab428ef395d1779dbb3a1f",
+  "_shasum": "eeb38a1a2d0dfd4d23263eb84cc4aa59d10c54ef",
   "_shrinkwrap": null,
   "_spec": "cannon@github:donmccurdy/cannon.js#v0.6.2-dev1",
   "_where": "/Users/michael/Sites/block-break-vr/node_modules/aframe-physics-system",
@@ -109090,11 +109124,12 @@ World.prototype.clearForces = function(){
 	      templateData[key] = el.dataset[key];
 	    });
 	    if (data.data) {
-	      templateData = extend(templateData, el.getComputedAttribute(data.data));
+	      templateData = extend(templateData, el.getAttribute(data.data));
 	    }
 
 	    var renderedTemplate = _renderTemplate(templateCacheItem.template, templateCacheItem.type, templateData);
 	    el.insertAdjacentHTML(data.insert, renderedTemplate);
+	    el.emit('templaterendered');
 	  }
 	});
 
@@ -109134,8 +109169,6 @@ World.prototype.clearForces = function(){
 	    default:
 	      {
 	        // If type not specified, assume HTML. Add some ES6 template string sugar.
-	        console.log(template);
-	        console.log(context);
 	        return templateString(template, context);
 	      }
 	  }
@@ -112036,18 +112069,42 @@ World.prototype.clearForces = function(){
 	    var dirtyComps = [];
 
 	    for (var i in syncedComps) {
-	      var name = syncedComps[i];
-	      if (!newComps.hasOwnProperty(name)) {
+	      var schema = syncedComps[i];
+	      var compKey;
+	      var newCompData;
+
+	      var isRootComponent = typeof schema === 'string';
+
+	      if (isRootComponent) {
+	        var hasComponent = newComps.hasOwnProperty(schema);
+	        if (!hasComponent) {
+	          continue;
+	        }
+	        compKey = schema;
+	        newCompData = newComps[schema].getData();
+	      } else {
+	        // is child component
+	        var selector = schema.selector;
+	        var compName = schema.component;
+
+	        var childEl = this.el.querySelector(selector);
+	        var hasComponent = childEl && childEl.components.hasOwnProperty(compName);
+	        if (!hasComponent) {
+	          continue;
+	        }
+	        compKey = this.childSchemaToKey(schema);
+	        newCompData = childEl.components[compName].getData();
+	      }
+
+	      var compIsCached = this.cachedData.hasOwnProperty(compKey);
+	      if (!compIsCached) {
+	        dirtyComps.push(schema);
 	        continue;
 	      }
-	      if (!this.cachedData.hasOwnProperty(name)) {
-	        dirtyComps.push(name);
-	        continue;
-	      }
-	      var oldCompData = this.cachedData[name];
-	      var newCompData = newComps[name].getData();
+
+	      var oldCompData = this.cachedData[compKey];
 	      if (!deepEqual(oldCompData, newCompData)) {
-	        dirtyComps.push(name);
+	        dirtyComps.push(schema);
 	      }
 	    }
 	    return dirtyComps;
@@ -112514,8 +112571,8 @@ AFRAME.registerComponent('spawn-in-circle', {
   },
 
   randomPointOnCircle: function (radius, angleRad) {
-    x = Math.cos(angleRad)*radius;
-    y = Math.sin(angleRad)*radius;
+    var x = Math.cos(angleRad)*radius;
+    var y = Math.sin(angleRad)*radius;
     return {x: x, y: y};
   }
 });
