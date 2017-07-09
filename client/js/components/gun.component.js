@@ -34,7 +34,7 @@ AFRAME.registerComponent('gun', {
         //entity.setAttribute('sphere-collider', 'objects', '#environment-collision1,.voxel');
         sceneEl.appendChild(entity);
 
-        entity.addEventListener('hit', this.explode.bind(this));
+        entity.addEventListener('hit', this.onBulletHit.bind(this));
     },
 
     getInitialBulletPosition: function (spawnerEl) {
@@ -60,7 +60,7 @@ AFRAME.registerComponent('gun', {
         rad.set(THREE.Math.radToDeg(rad.x), THREE.Math.radToDeg(rad.y), THREE.Math.radToDeg(rad.z));
     },
 
-    explode: function (event) {
+    onBulletHit: function (event) {
 
         var hitEl = event.detail.el;
         var bulletEl = event.target;
@@ -70,17 +70,7 @@ AFRAME.registerComponent('gun', {
             switch(elClass){
                 case 'voxel':
 
-                    console.log('HitEl: ',hitEl);
-
-                    console.log('ChildNodes: ',hitEl.parentNode.childNodes);
-
-                    //TODO: loop through voxels in scene and set their dynamic-body only if their z and x position match the deleted voxel
-
-                    hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
-                    bulletEl.parentNode.removeChild(bulletEl);
-                    //TODO: spawn explosion at world coordinates then delete the bomb
-                    //TODO: add logic to explosion to remove collided entities
-                    console.log('Hit voxel');
+                    this.destroyVoxel(hitEl,bulletEl);
                     break;
                 case 'bullet-collider':
                     console.log('Hit bullet-collider');
@@ -88,5 +78,35 @@ AFRAME.registerComponent('gun', {
             }
 
         }
+    },
+
+    destroyVoxel: function (hitEl,bulletEl) {
+        console.log('HitEl: ',hitEl);
+
+        console.log('ChildNodes: ',hitEl.parentNode.childNodes);
+
+        //TODO: loop through voxels in scene and set their dynamic-body only if their z and x position match the deleted voxel
+
+        //hitEl.setAttribute('sound','
+
+        var soundArray = ['#explode0-sound','#explode1-sound','#explode2-sound','#explode3-sound'];
+        var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+
+        hitEl.setAttribute('sound','src',soundArray[randomKey]);
+
+        hitEl.components.sound.playSound();
+
+        bulletEl.parentNode.removeChild(bulletEl);
+
+        setTimeout(function(){
+            hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
+        },250);
+
+
+
+        //TODO: spawn explosion at world coordinates then delete the bomb
+        //TODO: add logic to explosion to remove collided entities
+        console.log('Hit voxel');
     }
+
 });

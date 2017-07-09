@@ -38,6 +38,12 @@
         <audio id="pop6-sound" src="assets/ogg/240566__onikage22__blip-plock-pop6.ogg"></audio>
         <audio id="pop7-sound" src="assets/ogg/240566__onikage22__blip-plock-pop7.ogg"></audio>
 
+        <audio id="explode0-sound" src="assets/ogg/170146__timgormly__8-bit-explosion0.ogg"></audio>
+        <audio id="explode1-sound" src="assets/ogg/162792__timgormly__8-bit-explosion1.ogg"></audio>
+        <audio id="explode2-sound" src="assets/ogg/170144__timgormly__8-bit-explosion2.ogg"></audio>
+        <audio id="explode3-sound" src="assets/ogg/170145__timgormly__8-bit-explosion3.ogg"></audio>
+
+
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
         <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
 
@@ -47,12 +53,13 @@
           <a-entity class="voxel"
                     material="transparent: true; opacity: 0;"
                     geometry="primitive: box; height: 1; width: 1; depth: 1"
+                    static-body
+                    sound="src: #explode0-sound; autoplay: false; loop: false; poolSize: 1;"
                     ></a-entity>
           <a-entity class="voxel"
                     obj-model="obj: #mr-block-obj; mtl: #mr-block-mtl"
                     scale="5 5 5" 
                     shadow="receive: false"
-                    static-body
                     ></a-entity>
         </script>
 
