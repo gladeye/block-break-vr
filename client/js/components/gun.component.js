@@ -67,16 +67,16 @@ AFRAME.registerComponent('gun', {
 
         if(hitEl !== null){
             var elClass = hitEl.getAttribute('class');
-
-            //console.log('hit event', event.detail.el);
-
             switch(elClass){
                 case 'voxel':
 
-                    //console.log('this: ',this);
+                    console.log('HitEl: ',hitEl);
 
-                    //console.log('event',event);
-                    //event.target.removeEventListener('hit',this.explode);
+                    console.log('ChildNodes: ',hitEl.parentNode.childNodes);
+
+                    //TODO: loop through voxels in scene and set their dynamic-body only if their z and x position match the deleted voxel
+
+                    hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
                     bulletEl.parentNode.removeChild(bulletEl);
                     //TODO: spawn explosion at world coordinates then delete the bomb
                     //TODO: add logic to explosion to remove collided entities
