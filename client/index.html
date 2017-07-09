@@ -53,6 +53,10 @@
         <audio id="blip1-sound" src="assets/ogg/344298__musiclegends__blip-select35.ogg"></audio>
         <audio id="blip2-sound" src="assets/ogg/344299__musiclegends__blip-select11.ogg"></audio>
 
+        <audio id="jump0-sound" src="assets/ogg/344304__musiclegends__jump20.ogg"></audio>
+        <audio id="jump1-sound" src="assets/ogg/344305__musiclegends__jump14.ogg"></audio>
+
+
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
         <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
 
@@ -65,7 +69,7 @@
                     static-body
                     sound="src: #explode0-sound; autoplay: false; loop: false; poolSize: 1;"
                     ></a-entity>
-          <a-entity class="voxel"
+          <a-entity
                     obj-model="obj: #mr-block-obj; mtl: #mr-block-mtl"
                     scale="5 5 5" 
                     shadow="receive: false"
@@ -135,7 +139,8 @@
               checkpoint-controls="mode: teleport"
               gun="bulletTemplate:#bullet-template; triggerKeyCode:17;"
               kinematic-body="radius: 0.5; enableSlopes: false;"
-              jump-ability
+              jump-ability="maxJumps: 2;"
+              sound="src: #jump0-sound; autoplay: false; loop: false; poolSize: 5; positional: true;"
             auto-fall-respawn>
         <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
                   position="0 0 -1"
