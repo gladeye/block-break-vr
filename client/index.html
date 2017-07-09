@@ -103,11 +103,12 @@
           </a-entity> 
         </script>
 
-    <a-entity id="player" camera="userHeight: 1.6" networked="template:#avatar-template;showLocalTemplate:false;" spawn-in-circle="radius:3" position="0 1.6 0" universal-controls="movementControls: checkpoint, keyboard"
+    <a-entity id="player" camera="userHeight: 1.6" networked="template:#avatar-template;showLocalTemplate:false;" spawn-in-circle="radius:10" position="0 20 0" universal-controls="movementControls: checkpoint, keyboard"
               checkpoint-controls="mode: teleport"
               gun="bulletTemplate:#bullet-template; triggerKeyCode:17;"
               kinematic-body="radius: 0.5; enableSlopes: false;"
-              jump-ability>
+              jump-ability
+            auto-fall-respawn>
         <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
                   position="0 0 -1"
                   geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03;"
