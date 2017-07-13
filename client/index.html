@@ -17,7 +17,7 @@
 <a-scene main networked-scene="
       room: dev;
       debug: false;
-    " debug>
+    ">
     <a-assets>
 
       <a-asset-item id="bomb-obj" src="assets/obj/exploding-bomb/model.obj"></a-asset-item>
@@ -159,8 +159,8 @@
                          fill="forwards" from="0.7 0.7 0.7" to="1 1 1" dur="250"></a-animation>
         </a-entity>
 
-        <a-entity id="left-hand" oculus-touch-controls="hand: left" vive-controls="hand: left"  teleport-controls="type: parabolic; collisionEntities: [class='voxel'], #environment-collision1; maxLength: 20; curveShootingSpeed: 20;" hand-controls="left" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
-        <a-entity id="right-hand" hand-controls="right" controller-cursor intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1" hand-controls="right" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
+        <a-entity id="left-hand" oculus-touch-controls="hand: left" vive-controls="hand: left"  teleport-controls="type: parabolic; collisionEntities: [class='voxel'], #environment-collision1; maxLength: 20; curveShootingSpeed: 20;"></a-entity>
+        <a-entity id="right-hand" hand-controls="right" controller-cursor intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1"></a-entity>
 
     </a-entity>
 
