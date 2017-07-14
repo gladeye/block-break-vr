@@ -6,6 +6,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000">
 
+    <!-- Bootstrap Bootswatch theme CSS - other themes available here: https://bootswatch.com -->
+    <link rel="stylesheet" href="assets/css/vendor/bootswatch-slate.3.3.7.min.css" />
     <link rel="manifest" href="manifest.webmanifest">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
     <script src="https://cdn.rawgit.com/priologic/easyrtc/v1.1.0/api/easyrtc.js"></script>
@@ -14,7 +16,7 @@
 </head>
 <body>
 
-<a-scene main networked-scene="
+<a-scene preloader main networked-scene="
       room: dev;
       debug: false;
     ">
