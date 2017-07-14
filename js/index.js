@@ -684,12 +684,13 @@ require('aframe-gradient-sky');
 require('aframe-randomizer-components');
 require('aframe-particle-system-component');
 require('aframe-preloader-component');
+//require('./components/aframe-preloader-component');
 
 require('./components/auto-fall-respawn');
 require('./components/intersection-spawn-multi');
 require('./components/snap');
-require('./components/forward.component')
-require('./components/gun.component')
+require('./components/forward.component');
+require('./components/gun.component');
 require('./components/main');
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
