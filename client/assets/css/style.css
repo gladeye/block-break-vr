@@ -1,0 +1,22 @@
+#preloader-modal .preloader-modal__spinner{
+    display: inline-block;
+    margin-bottom: 2em;
+}
+
+#preloader-modal .preloader-modal__spinner{
+    transform: scale3d(2,2,1);
+}
+
+#preloader-modal .btn{
+    margin-top: 2em;
+}
+
+/* sk-cube-grid */
+
+#preloader-modal .preloader-modal__spinner.sk-cube-grid .sk-cube{
+    background-color: #c8c8c8;
+}
+
+#preloader-modal.preloader-modal__complete .preloader-modal__spinner.sk-cube-grid .sk-cube{
+    background-color: #009900;
+}

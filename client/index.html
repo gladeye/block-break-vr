@@ -8,6 +8,8 @@
 
     <!-- Bootstrap Bootswatch theme CSS - other themes available here: https://bootswatch.com -->
     <link rel="stylesheet" href="assets/css/vendor/bootswatch-slate.3.3.7.min.css" />
+    <link rel="stylesheet" href="bower_components/SpinKit/css/spinners/9-cube-grid.css" />
+    <link rel="stylesheet" href="assets/css/style.css" />
     <link rel="manifest" href="manifest.webmanifest">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
     <script src="https://cdn.rawgit.com/priologic/easyrtc/v1.1.0/api/easyrtc.js"></script>
@@ -16,26 +18,52 @@
 </head>
 <body>
 
-<a-scene preloader main networked-scene="
-      room: dev;
-      debug: false;
-    ">
+<div id="preloader-modal" class="modal instructions-modal" tabindex="-1" role="dialog" style="display: none;">
+    <div class="modal-dialog modal-dialog__full" role="document">
+        <div class="modal-content vertical-align text-center">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="preloader-modal__spinner sk-spinner sk-cube-grid" aria-hidden="true">
+                            <div class="sk-cube sk-cube1"></div>
+                            <div class="sk-cube sk-cube2"></div>
+                            <div class="sk-cube sk-cube3"></div>
+                            <div class="sk-cube sk-cube4"></div>
+                            <div class="sk-cube sk-cube5"></div>
+                            <div class="sk-cube sk-cube6"></div>
+                            <div class="sk-cube sk-cube7"></div>
+                            <div class="sk-cube sk-cube8"></div>
+                            <div class="sk-cube sk-cube9"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <span class="progress-label">Loading 0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<a-scene preloader="autoInject: false; clickToClose: false; autoClose: true; target: #preloader-modal; bar: #preloader-modal .progress-bar; label: #preloader-modal .progress-label; labelText: Loading {0}%; slowLoad: true; debug: true; doneLabelText: Done! Hold tight...;" main networked-scene="room: dev; debug: false;">
     <a-assets>
 
-      <a-asset-item id="bomb-obj" src="assets/obj/exploding-bomb/model.obj"></a-asset-item>
-      <a-asset-item id="bomb-mtl" src="assets/obj/exploding-bomb/materials.mtl"></a-asset-item>
+        <a-asset-item id="bomb-obj" src="assets/obj/exploding-bomb/model.obj" preload="auto"></a-asset-item>
+        <a-asset-item id="bomb-mtl" src="assets/obj/exploding-bomb/materials.mtl" preload="auto"></a-asset-item>
 
-      <a-asset-item id="block-obj" src="assets/obj/basic-block/model.obj"></a-asset-item>
-      <a-asset-item id="block-mtl" src="assets/obj/basic-block/materials.mtl"></a-asset-item>
+        <a-asset-item id="block-obj" src="assets/obj/basic-block/model.obj" preload="auto"></a-asset-item>
+        <a-asset-item id="block-mtl" src="assets/obj/basic-block/materials.mtl" preload="auto"></a-asset-item>
 
-      <a-asset-item id="mr-block-obj" src="assets/obj/mr-block/model.obj"></a-asset-item>
-      <a-asset-item id="mr-block-mtl" src="assets/obj/mr-block/materials.mtl"></a-asset-item>
+        <a-asset-item id="mr-block-obj" src="assets/obj/mr-block/model.obj" preload="auto"></a-asset-item>
+        <a-asset-item id="mr-block-mtl" src="assets/obj/mr-block/materials.mtl" preload="auto"></a-asset-item>
 
-      <a-asset-item id="relic-obj" src="assets/obj/relic/model.obj"></a-asset-item>
-      <a-asset-item id="relic-mtl" src="assets/obj/relic/materials.mtl"></a-asset-item>
+        <a-asset-item id="relic-obj" src="assets/obj/relic/model.obj" preload="auto"></a-asset-item>
+        <a-asset-item id="relic-mtl" src="assets/obj/relic/materials.mtl" preload="auto"></a-asset-item>
 
-      <a-asset-item id="crystal-block-obj" src="assets/obj/crystal-block/model.obj"></a-asset-item>
-      <a-asset-item id="crystal-block-mtl" src="assets/obj/crystal-block/materials.mtl"></a-asset-item>
+        <a-asset-item id="crystal-block-obj" src="assets/obj/crystal-block/model.obj" preload="auto"></a-asset-item>
+        <a-asset-item id="crystal-block-mtl" src="assets/obj/crystal-block/materials.mtl" preload="auto"></a-asset-item>
 
         <audio id="build-music" src="assets/ogg/Build-Phase_looped.ogg"></audio>
         <audio id="game-over-music" src="assets/ogg/You_Win.ogg"></audio>
@@ -66,15 +94,15 @@
         <!-- Templates -->
 
         <script id="greystone-block-template" type="text/html">
-          <a-entity class="voxel"
-                    material="transparent: true; opacity: 0;"
-                    geometry="primitive: box; height: 1; width: 1; depth: 1"
-                    static-body
-                    sound="src: #explode0-sound; autoplay: false; loop: false; poolSize: 1;"
+            <a-entity class="voxel"
+                      material="transparent: true; opacity: 0;"
+                      geometry="primitive: box; height: 1; width: 1; depth: 1"
+                      static-body
+                      sound="src: #explode0-sound; autoplay: false; loop: false; poolSize: 1;"
                     ></a-entity>
-          <a-entity
+            <a-entity
                     obj-model="obj: #mr-block-obj; mtl: #mr-block-mtl"
-                    scale="5 5 5" 
+                    scale="5 5 5"
                     shadow="receive: false"
                     ></a-entity>
         </script>
@@ -131,12 +159,12 @@
 
         <!-- /Templates -->
     </a-assets>
-        <!-- Bullet -->
-        <script id="bullet-template" type="text/html">
-          <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects: .voxel, .relic; watch: false; radius: 0.01">
+    <!-- Bullet -->
+    <script id="bullet-template" type="text/html">
+        <a-entity class="bullet" obj-model="obj: #bomb-obj; mtl: #bomb-mtl" sphere-collider="objects: .voxel, .relic; watch: false; radius: 0.01">
             <a-animation attribute="rotation" to="360 0 0" easing="linear" dur="1000" repeat="indefinite"></a-animation>
-          </a-entity> 
-        </script>
+        </a-entity>
+    </script>
 
     <a-entity id="player" camera="userHeight: 1.6" networked="template:#avatar-template;showLocalTemplate:false;" spawn-in-circle="radius:10" position="0 20 0" universal-controls="movementControls: checkpoint, keyboard"
               checkpoint-controls="mode: teleport"
@@ -144,7 +172,7 @@
               kinematic-body="radius: 0.5; enableSlopes: false;"
               jump-ability="maxJumps: 2;"
               sound="src: #jump0-sound; autoplay: false; loop: false; poolSize: 5; positional: true;"
-            auto-fall-respawn>
+              auto-fall-respawn>
         <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
                   position="0 0 -1"
                   geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03;"
@@ -180,8 +208,7 @@
 
 </a-scene>
 
-<script>
 
-</script>
+
 </body>
 </html>

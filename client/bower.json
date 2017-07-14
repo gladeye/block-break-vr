@@ -1,0 +1,21 @@
+{
+  "name": "block-break-vr",
+  "homepage": "https://github.com/gladeye/block-break-vr",
+  "authors": [
+    "Michael Andrew <michael@uxvirtual.com>"
+  ],
+  "description": "",
+  "main": "js/index.js",
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "SpinKit": "spinkit#^1.2.5"
+  }
+}
