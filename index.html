@@ -6,6 +6,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000">
 
+    <!-- Bootstrap Bootswatch theme CSS - other themes available here: https://bootswatch.com -->
+    <link rel="stylesheet" href="assets/css/vendor/bootswatch-slate.3.3.7.min.css" />
     <link rel="manifest" href="manifest.webmanifest">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
     <script src="https://cdn.rawgit.com/priologic/easyrtc/v1.1.0/api/easyrtc.js"></script>
@@ -14,10 +16,10 @@
 </head>
 <body>
 
-<a-scene main networked-scene="
+<a-scene preloader main networked-scene="
       room: dev;
       debug: false;
-    " debug>
+    ">
     <a-assets>
 
       <a-asset-item id="bomb-obj" src="assets/obj/exploding-bomb/model.obj"></a-asset-item>
@@ -159,8 +161,8 @@
                          fill="forwards" from="0.7 0.7 0.7" to="1 1 1" dur="250"></a-animation>
         </a-entity>
 
-        <a-entity id="left-hand" oculus-touch-controls="hand: left" vive-controls="hand: left"  teleport-controls="type: parabolic; collisionEntities: [class='voxel'], #environment-collision1; maxLength: 20; curveShootingSpeed: 20;" hand-controls="left" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
-        <a-entity id="right-hand" hand-controls="right" controller-cursor intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1" hand-controls="right" networked="template:#hand-template;showLocalTemplate:false;" super-hands sphere-collider="objects: a-box"></a-entity>
+        <a-entity id="left-hand" oculus-touch-controls="hand: left" vive-controls="hand: left"  teleport-controls="type: parabolic; collisionEntities: [class='voxel'], #environment-collision1; maxLength: 20; curveShootingSpeed: 20;"></a-entity>
+        <a-entity id="right-hand" hand-controls="right" controller-cursor intersection-spawn-multi="event: click; currenttemplate: #greystone-block-template; templates: #greystone-block-template; offset: 0.5 0.5 0.5; snap: 1 1 1"></a-entity>
 
     </a-entity>
 
@@ -171,7 +173,7 @@
         <a-box id="environment-collision1" class="environment" static-body position="0 0 0" width="30" depth="30" height="30"></a-box>
     </a-entity>
 
-    <a-entity environment="preset: forest; groundColor: #445; grid: cross" position="0 -1 0"></a-entity>
+    <a-entity id="environment" environment="preset: forest;" position="0 -1 0"></a-entity>
 
     <a-entity id="bg-music-emitter" sound="src: #build-music; autoplay: true; loop: true; positional: false"></a-entity>
     <a-entity id="block-sound-emitter" sound="src: #pop1-sound; autoplay: false; loop: false; poolSize: 5; positional: false;" position="0 0 -1"></a-entity>
