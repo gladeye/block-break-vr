@@ -15,13 +15,13 @@ AFRAME.registerComponent('gladeye-jump-ability', {
     playerHeight: { default: 1.764 },
     maxJumps: { default: 1 },
     distance: { default: 5 },
-    soundJump: { default: '' },
-    soundLand: { default: '' },
+    soundJump: { type: 'array', default: [] },
+    soundLand: { type: 'array', default: [] },
     debug: { default: false }
   },
 
   init: function () {
-    console.log('init gladeye-jump-ability');
+
     this.velocity = 0;
     this.numJumps = 0;
 
@@ -65,22 +65,27 @@ AFRAME.registerComponent('gladeye-jump-ability', {
 
   playJumpSound: function() {
 
-    var soundArray = ['#jump0-sound','#jump1-sound'];
-    var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+    if(this.data.soundJump.length >= 1){
 
-    this.el.setAttribute('sound','src',soundArray[randomKey]);
+      var soundArray = this.data.soundJump;
+      var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
 
-    this.el.components.sound.playSound();
+      this.el.setAttribute('sound','src',soundArray[randomKey]);
+
+      this.el.components.sound.playSound();
+    }
   },
 
   playLandSound: function() {
 
-    var soundArray = ['#hurt0-sound','#hurt1-sound'];
-    var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+    if(this.data.soundLand.length >= 1){
+      var soundArray = this.data.soundLand;
+      var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
 
-    this.el.setAttribute('sound','src',soundArray[randomKey]);
+      this.el.setAttribute('sound','src',soundArray[randomKey]);
 
-    this.el.components.sound.playSound();
+      this.el.components.sound.playSound();
+    }
   },
 
 });
