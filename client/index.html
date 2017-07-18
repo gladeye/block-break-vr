@@ -87,6 +87,9 @@
         <audio id="jump0-sound" src="assets/ogg/344304__musiclegends__jump20.ogg"></audio>
         <audio id="jump1-sound" src="assets/ogg/344305__musiclegends__jump14.ogg"></audio>
 
+        <audio id="hurt0-sound" src="assets/ogg/344300__musiclegends__hit-hurt17.ogg"></audio>
+        <audio id="hurt1-sound" src="assets/ogg/344301__musiclegends__hit-hurt13.ogg"></audio>
+
 
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
         <img id="sky" src="http://i.imgur.com/WqlqEkq.jpg" crossorigin="anonymous" />
@@ -171,7 +174,7 @@
               checkpoint-controls="mode: teleport"
               gun="bulletTemplate:#bullet-template; triggerKeyCode:17;"
               kinematic-body="radius: 0.5; enableSlopes: false;"
-              jump-ability="maxJumps: 2;"
+              gladeye-jump-ability="maxJumps: 2; soundJump: #jump0-sound, #jump1-sound; soundLand: #hurt0-sound, #hurt1-sound; debug: true;"
               sound="src: #jump0-sound; autoplay: false; loop: false; poolSize: 5; positional: true;"
               auto-fall-respawn>
         <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
