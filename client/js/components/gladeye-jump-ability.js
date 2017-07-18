@@ -60,11 +60,22 @@ AFRAME.registerComponent('gladeye-jump-ability', {
 
   onCollide: function () {
     this.numJumps = 0;
+    this.playLandSound();
   },
 
-  playJumpSound: function(tipEl) {
+  playJumpSound: function() {
 
     var soundArray = ['#jump0-sound','#jump1-sound'];
+    var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+
+    this.el.setAttribute('sound','src',soundArray[randomKey]);
+
+    this.el.components.sound.playSound();
+  },
+
+  playLandSound: function() {
+
+    var soundArray = ['#hurt0-sound','#hurt1-sound'];
     var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
 
     this.el.setAttribute('sound','src',soundArray[randomKey]);
