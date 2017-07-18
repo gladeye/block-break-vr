@@ -18,4 +18,5 @@ require('./components/intersection-spawn-multi');
 require('./components/snap');
 require('./components/forward.component');
 require('./components/gun.component');
+require('./components/gladeye-jump-ability');
 require('./components/main');
