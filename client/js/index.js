@@ -10,7 +10,7 @@ require('aframe-environment-component/index.js');
 require('aframe-gradient-sky');
 require('aframe-randomizer-components');
 require('aframe-particle-system-component');
-require('aframe-preloader-component');
+require('@gladeye/aframe-preloader-component');
 //require('./components/aframe-preloader-component');
 
 require('./components/auto-fall-respawn');
