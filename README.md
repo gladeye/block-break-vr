@@ -23,7 +23,6 @@ to destroy the opposing teams shiny relic.
 
 ## TODO
 
-*   Add jump sound effects
 *   Add block destruction animation
 *   Sync sound events over network
 *   Trigger local physics for animations in response to network events (e.g. block destruction)
