@@ -17,6 +17,7 @@ AFRAME.registerComponent('gladeye-jump-ability', {
     distance: { default: 5 },
     soundJump: { type: 'array', default: [] },
     soundLand: { type: 'array', default: [] },
+    soundFalling: { type: 'array', default: [] },
     debug: { default: false }
   },
 
@@ -24,6 +25,10 @@ AFRAME.registerComponent('gladeye-jump-ability', {
 
     this.velocity = 0;
     this.numJumps = 0;
+
+    this.previousVelocity = 0;
+    this.landed = 0;
+    this.falling = 0;
 
     var beginJump = this.beginJump.bind(this),
         events = this.data.on.split(' ');
@@ -54,13 +59,19 @@ AFRAME.registerComponent('gladeye-jump-ability', {
           initialVelocity = Math.sqrt(-2 * data.distance * (ACCEL_G + EASING)),
           v = this.el.getAttribute('velocity');
       this.el.setAttribute('velocity', {x: v.x, y: initialVelocity, z: v.z});
+      this.landed = 0;
       this.numJumps++;
     }
   },
 
   onCollide: function () {
+    // TODO look into whether we can confirm the face we collided with is a top or side 
     this.numJumps = 0;
+    this.stopFallingSound();
     this.playLandSound();
+    // Grounded player
+    this.landed = 1;
+    this.falling = 0;
   },
 
   playJumpSound: function() {
@@ -92,5 +103,40 @@ AFRAME.registerComponent('gladeye-jump-ability', {
       this.el.components.sound.playSound();
     }
   },
+
+  playFallingSound: function() {
+
+    if(this.data.soundFalling.length >= 1){
+      var soundArray = this.data.soundFalling;
+      var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+
+      this.el.setAttribute('sound',
+        {
+          src: soundArray[randomKey],
+          positional: false
+        }
+      );
+
+      this.el.components.sound.playSound();
+    }
+  },
+
+  stopFallingSound: function() {
+    if(this.data.soundFalling.length >= 1){
+      this.el.components.sound.stopSound();
+    }
+  },
+
+  tick: function(){
+
+    if(this.el.body.velocity.y < 0 && this.el.body.velocity.y < this.previousVelocity){
+      if(this.landed == 0 && this.falling == 0 && this.el.body.velocity.y <= -16){
+        this.falling = 1;
+        this.playFallingSound();
+      }
+    }
+
+    this.previousVelocity = this.el.body.velocity.y;
+  }
 
 });
