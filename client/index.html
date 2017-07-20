@@ -75,6 +75,12 @@
         <audio id="pop6-sound" src="assets/ogg/240566__onikage22__blip-plock-pop6.ogg"></audio>
         <audio id="pop7-sound" src="assets/ogg/240566__onikage22__blip-plock-pop7.ogg"></audio>
 
+
+        <audio id="falling1-sound" src="assets/ogg/falling1.ogg"></audio>
+        <audio id="falling2-sound" src="assets/ogg/falling2.ogg"></audio>
+        <audio id="falling3-sound" src="assets/ogg/falling3.ogg"></audio>
+        <audio id="falling4-sound" src="assets/ogg/falling4.ogg"></audio>
+
         <audio id="explode0-sound" src="assets/ogg/170146__timgormly__8-bit-explosion0.ogg"></audio>
         <audio id="explode1-sound" src="assets/ogg/162792__timgormly__8-bit-explosion1.ogg"></audio>
         <audio id="explode2-sound" src="assets/ogg/170144__timgormly__8-bit-explosion2.ogg"></audio>
@@ -206,7 +212,7 @@
 
     <a-entity id="environment" environment="preset: forest;" position="0 -1 0"></a-entity>
 
-    <a-entity id="bg-music-emitter" sound="src: #build-music; autoplay: true; loop: true; positional: false"></a-entity>
+    <a-entity id="bg-music-emitter" sound="src: #build-music; autoplay: false; loop: true; positional: false"></a-entity>
     <a-entity id="block-sound-emitter" sound="src: #pop1-sound; autoplay: false; loop: false; poolSize: 5; positional: false;" position="0 0 -1"></a-entity>
 
 </a-scene>
