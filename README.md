@@ -23,7 +23,6 @@ to destroy the opposing teams shiny relic.
 
 ## TODO
 
-*   Add block destruction animation
 *   Sync sound events over network
 *   Trigger local physics for animations in response to network events (e.g. block destruction)
 *   Provision multiplayer demo server
@@ -36,7 +35,7 @@ to destroy the opposing teams shiny relic.
 
 ## Credits
 
-*   Sound effects: [timgormly](https://freesound.org/people/timgormly/), [onikage22](https://freesound.org/people/onikage22/), [MusicLegends](https://freesound.org/people/musiclegends/)
+*   Sound effects: [timgormly](https://freesound.org/people/timgormly/), [onikage22](https://freesound.org/people/onikage22/), [MusicLegends](https://freesound.org/people/musiclegends/), [Cyril Laurier](https://freesound.org/people/Cyril%20Laurier/sounds/17645/)
 *   Music: [Stray Fibers](https://www.guyannan.com/music/)
 *   Lead Programmer: [Michael Andrew](https://www.uxvirtual.com)
 *   Programmers: [Ben Sharp](https://github.com/ben-sharp)
