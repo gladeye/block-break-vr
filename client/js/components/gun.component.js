@@ -166,7 +166,7 @@ AFRAME.registerComponent('gun', {
 
             var fragment = document.createElement('a-entity');
 
-            var fragmentColours = ['#CCC', '#666', '#444', '#888', '#111', '#222', '#333', '#777', '#AAA'];
+            var fragmentColours = ['#CCC', '#666', '#444', '#888', '#111', '#222', '#333', '#777', '#AAA', '#632f02', '#40342a'];
             var randomColour = fragmentColours[Math.floor(Math.random() * fragmentColours.length)];
 
             console.log('this bitch is:', randomColour);
