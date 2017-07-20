@@ -26,7 +26,6 @@ AFRAME.registerComponent('gladeye-jump-ability', {
     this.velocity = 0;
     this.numJumps = 0;
 
-    this.previousVelocity = 0;
     this.landed = 0;
     this.falling = 0;
 
@@ -129,11 +128,9 @@ AFRAME.registerComponent('gladeye-jump-ability', {
 
   tick: function(){
 
-    if(this.el.body.velocity.y < 0 && this.el.body.velocity.y < this.previousVelocity){
-      if(this.landed == 0 && this.falling == 0 && this.el.body.velocity.y <= -16){
-        this.falling = 1;
-        this.playFallingSound();
-      }
+    if(this.landed == 0 && this.falling == 0 && this.el.body.velocity.y <= -16){
+      this.falling = 1;
+      this.playFallingSound();
     }
 
     this.previousVelocity = this.el.body.velocity.y;
