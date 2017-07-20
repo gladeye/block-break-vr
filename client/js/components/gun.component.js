@@ -166,13 +166,21 @@ AFRAME.registerComponent('gun', {
 
             var fragment = document.createElement('a-entity');
 
-            fragment.setAttribute('class', 'voxelFragment');
+            fragment.setAttribute('class', 'voxelFragment'+i);
             fragment.setAttribute('position', fragmentPosition);
             fragment.setAttribute('geometry', { primitive: 'box', height: 0.075, width: 0.075, depth: 0.075 });
-            fragment.setAttribute('dynamic-body', true);
             fragment.setAttribute('remove-in-seconds', 3);
 
             hitEl.sceneEl.appendChild(fragment);
+
+            fragment.setAttribute('dynamic-body', 'mass: 80');
+
+            fragment.addEventListener('body-loaded', function(fragEvent){
+                var frag = this;
+                setTimeout(function () {
+                    frag.body.applyImpulse(new CANNON.Vec3(Math.random()*2-1, 1, Math.random()*2-1), new CANNON.Vec3().copy(frag.object3D.getWorldPosition()));
+                }, 0);
+            });
 
             i++;
         }
