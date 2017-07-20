@@ -166,10 +166,16 @@ AFRAME.registerComponent('gun', {
 
             var fragment = document.createElement('a-entity');
 
+            var fragmentColours = ['#CCC', '#666', '#444', '#888', '#111', '#222', '#333', '#777', '#AAA'];
+            var randomColour = fragmentColours[Math.floor(Math.random() * fragmentColours.length)];
+
+            console.log('this bitch is:', randomColour);
+
             fragment.setAttribute('class', 'voxelFragment'+i);
             fragment.setAttribute('position', fragmentPosition);
             fragment.setAttribute('geometry', { primitive: 'box', height: 0.075, width: 0.075, depth: 0.075 });
             fragment.setAttribute('remove-in-seconds', 3);
+            fragment.setAttribute('material', {color: randomColour});
 
             hitEl.sceneEl.appendChild(fragment);
 
