@@ -82,7 +82,12 @@ AFRAME.registerComponent('gladeye-jump-ability', {
       var soundArray = this.data.soundLand;
       var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
 
-      this.el.setAttribute('sound','src',soundArray[randomKey]);
+      this.el.setAttribute('sound',
+        {
+          src: soundArray[randomKey],
+          positional: false
+        }
+      );
 
       this.el.components.sound.playSound();
     }
