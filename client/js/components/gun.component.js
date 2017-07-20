@@ -104,12 +104,11 @@ AFRAME.registerComponent('gun', {
             hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
         });*/
 
-        this.playExplodeSound(hitEl);
+        this.explodeVoxel(hitEl);
 
-        setTimeout(function(){
+        //setTimeout(function(){
             hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
-        },150);
-
+        //},150);
 
 
         bulletEl.parentNode.removeChild(bulletEl);
@@ -136,6 +135,50 @@ AFRAME.registerComponent('gun', {
         hitEl.setAttribute('sound','src',soundArray[randomKey]);
 
         hitEl.components.sound.playSound();
-    }
+    },
+
+    explodeVoxel: function(hitEl) {
+
+        this.playExplodeSound(hitEl);
+
+        var explosionPoint = hitEl.object3D.getWorldPosition();
+        var explosionFragmentsAmount = 11;
+
+        var i=0;
+        while( i <= explosionFragmentsAmount){
+
+            var fragmentPositionRadomisers = {
+                x: parseFloat((Math.random() * (0.1 - 0.5) + 0.5).toFixed(4)),
+                y: parseFloat((Math.random() * (0.5 - 1) + 1).toFixed(4)),
+                z: parseFloat((Math.random() * (0.1 - 0.5) + 0.5).toFixed(4))
+            }
+
+            // randomize positive/negative values for X/Z axes only 
+            // so voxels on the ground level don't create fragments below the ground
+            fragmentPositionRadomisers.x *= Math.floor(Math.random()*2) == 1 ? 1 : -1; // this will add minus sign in 50% of cases
+            fragmentPositionRadomisers.z *= Math.floor(Math.random()*2) == 1 ? 1 : -1;
+
+            let fragmentPosition = {
+                x: explosionPoint.x+fragmentPositionRadomisers.x, 
+                y: explosionPoint.y+fragmentPositionRadomisers.y, 
+                z: explosionPoint.z+fragmentPositionRadomisers.z
+            };
+
+            console.log('fragment '+i+' loaded at ', fragmentPosition);
+
+            var fragment = document.createElement('a-entity');
+
+            fragment.setAttribute('class', 'voxelFragment');
+            fragment.setAttribute('position', fragmentPosition);
+            fragment.setAttribute('geometry', { primitive: 'box', height: 0.075, width: 0.075, depth: 0.075 });
+            fragment.setAttribute('dynamic-body', true);
+            fragment.setAttribute('remove-in-seconds', 3);
+
+            hitEl.sceneEl.appendChild(fragment);
+
+            i++;
+        }
+        
+    },
 
 });
