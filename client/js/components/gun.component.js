@@ -164,8 +164,6 @@ AFRAME.registerComponent('gun', {
                 z: explosionPoint.z+fragmentPositionRadomisers.z
             };
 
-            console.log('fragment '+i+' loaded at ', fragmentPosition);
-
             var fragment = document.createElement('a-entity');
 
             fragment.setAttribute('class', 'voxelFragment');
