@@ -169,20 +169,23 @@ AFRAME.registerComponent('gun', {
             var fragmentColours = ['#CCC', '#666', '#444', '#888', '#111', '#222', '#333', '#777', '#AAA', '#632f02', '#40342a'];
             var randomColour = fragmentColours[Math.floor(Math.random() * fragmentColours.length)];
 
+            var fragmentSizes = [0.075, 0.05, 0.025, 0.01];
+            var randomSize = fragmentSizes[Math.floor(Math.random() * fragmentSizes.length)];
+
             fragment.setAttribute('class', 'voxelFragment'+i);
             fragment.setAttribute('position', fragmentPosition);
-            fragment.setAttribute('geometry', { primitive: 'box', height: 0.075, width: 0.075, depth: 0.075 });
+            fragment.setAttribute('geometry', { primitive: 'box', height: randomSize, width: randomSize, depth: randomSize });
             fragment.setAttribute('remove-in-seconds', 3);
             fragment.setAttribute('material', {color: randomColour});
 
             hitEl.sceneEl.appendChild(fragment);
 
-            fragment.setAttribute('dynamic-body', 'mass: 80');
+            fragment.setAttribute('dynamic-body', true); //'mass: 80'
 
             fragment.addEventListener('body-loaded', function(fragEvent){
                 var frag = this;
                 setTimeout(function () {
-                    frag.body.applyImpulse(new CANNON.Vec3(Math.random()*2-1, 1, Math.random()*2-1), new CANNON.Vec3().copy(frag.object3D.getWorldPosition()));
+                    //frag.body.applyImpulse(new CANNON.Vec3(Math.random()*2-1, 1, Math.random()*2-1), new CANNON.Vec3().copy(frag.object3D.getWorldPosition()));
                 }, 0);
             });
 
