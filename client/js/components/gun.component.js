@@ -141,15 +141,28 @@ AFRAME.registerComponent('gun', {
 
         this.playExplodeSound(hitEl);
 
-        var explosionPoint = hitEl.object3D.getWorldPosition();
+        var dt=1/60, f=100; // impulse strength
+        var impulse = new CANNON.Vec3(f*dt,0,0); // impulse direction
+
+        var explosionPoint = hitEl.object3D.getWorldPosition(); // impulse center point
         var explosionFragmentsAmount = 11;
+
+
+        // Dust particles
+        //<a-entity position="0 2.25 -15" particle-system="preset: dust"></a-entity>
+        var dustEntity = document.createElement('a-entity');
+        dustEntity.setAttribute('position', explosionPoint);
+        dustEntity.setAttribute('particle-system', {preset: 'dust'});
+        dustEntity.setAttribute('remove-in-seconds', 3);
+
+        //hitEl.sceneEl.appendChild(dustEntity);
 
         var i=0;
         while( i <= explosionFragmentsAmount){
 
             var fragmentPositionRadomisers = {
                 x: parseFloat((Math.random() * (0.1 - 0.5) + 0.5).toFixed(4)),
-                y: parseFloat((Math.random() * (0.5 - 1) + 1).toFixed(4)),
+                y: parseFloat((Math.random() * ((-0.3) - 0.3) + 1).toFixed(4)),
                 z: parseFloat((Math.random() * (0.1 - 0.5) + 0.5).toFixed(4))
             }
 
@@ -160,7 +173,7 @@ AFRAME.registerComponent('gun', {
 
             let fragmentPosition = {
                 x: explosionPoint.x+fragmentPositionRadomisers.x, 
-                y: explosionPoint.y+fragmentPositionRadomisers.y, 
+                y: explosionPoint.y,//+fragmentPositionRadomisers.y, 
                 z: explosionPoint.z+fragmentPositionRadomisers.z
             };
 
@@ -180,12 +193,13 @@ AFRAME.registerComponent('gun', {
 
             hitEl.sceneEl.appendChild(fragment);
 
-            fragment.setAttribute('dynamic-body', true); //'mass: 80'
+            fragment.setAttribute('dynamic-body', 'mass: 1'); //'mass: 80'
 
             fragment.addEventListener('body-loaded', function(fragEvent){
                 var frag = this;
                 setTimeout(function () {
-                    //frag.body.applyImpulse(new CANNON.Vec3(Math.random()*2-1, 1, Math.random()*2-1), new CANNON.Vec3().copy(frag.object3D.getWorldPosition()));
+                    //frag.body.applyImpulse(impulse,explosionPoint);
+                    frag.body.applyImpulse(new CANNON.Vec3(Math.random()*2-1, Math.random()*2-1, Math.random()*2-1), explosionPoint);
                 }, 0);
             });
 
