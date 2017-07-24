@@ -75,6 +75,12 @@
         <audio id="pop6-sound" src="assets/ogg/240566__onikage22__blip-plock-pop6.ogg"></audio>
         <audio id="pop7-sound" src="assets/ogg/240566__onikage22__blip-plock-pop7.ogg"></audio>
 
+
+        <audio id="falling1-sound" src="assets/ogg/falling1.ogg"></audio>
+        <audio id="falling2-sound" src="assets/ogg/falling2.ogg"></audio>
+        <audio id="falling3-sound" src="assets/ogg/falling3.ogg"></audio>
+        <audio id="falling4-sound" src="assets/ogg/falling4.ogg"></audio>
+
         <audio id="explode0-sound" src="assets/ogg/170146__timgormly__8-bit-explosion0.ogg"></audio>
         <audio id="explode1-sound" src="assets/ogg/162792__timgormly__8-bit-explosion1.ogg"></audio>
         <audio id="explode2-sound" src="assets/ogg/170144__timgormly__8-bit-explosion2.ogg"></audio>
@@ -86,6 +92,9 @@
 
         <audio id="jump0-sound" src="assets/ogg/344304__musiclegends__jump20.ogg"></audio>
         <audio id="jump1-sound" src="assets/ogg/344305__musiclegends__jump14.ogg"></audio>
+
+        <audio id="hurt0-sound" src="assets/ogg/344300__musiclegends__hit-hurt17.ogg"></audio>
+        <audio id="hurt1-sound" src="assets/ogg/344301__musiclegends__hit-hurt13.ogg"></audio>
 
 
         <img id="grid" src="https://img.gs/bbdkhfbzkk/stretch/https://i.imgur.com/25P1geh.png" crossorigin="anonymous">
@@ -171,8 +180,7 @@
               checkpoint-controls="mode: teleport"
               gun="bulletTemplate:#bullet-template; triggerKeyCode:17;"
               kinematic-body="radius: 0.5; enableSlopes: false;"
-              jump-ability="maxJumps: 2;"
-              sound="src: #jump0-sound; autoplay: false; loop: false; poolSize: 5; positional: true;"
+              gladeye-jump-ability="maxJumps: 2; soundJump: #jump0-sound, #jump1-sound; soundLand: #hurt0-sound, #hurt1-sound; soundFalling: #falling1-sound, #falling2-sound, #falling3-sound, #falling4-sound;"
               auto-fall-respawn>
         <a-entity id="cursor" cursor="fuse: false; fuseTimeout: 2000"
                   position="0 0 -1"
@@ -204,7 +212,7 @@
 
     <a-entity id="environment" environment="preset: forest;" position="0 -1 0"></a-entity>
 
-    <a-entity id="bg-music-emitter" sound="src: #build-music; autoplay: true; loop: true; positional: false"></a-entity>
+    <a-entity id="bg-music-emitter" sound="src: #build-music; autoplay: false; loop: true; positional: false"></a-entity>
     <a-entity id="block-sound-emitter" sound="src: #pop1-sound; autoplay: false; loop: false; poolSize: 5; positional: false;" position="0 0 -1"></a-entity>
 
 </a-scene>

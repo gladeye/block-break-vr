@@ -1,20 +1,64 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 AFRAME.registerComponent('auto-fall-respawn', {
     schema: {
-        height: {default: -50}
+        fallHeight: {type: 'int', default: -50},
+        respawnPosition: {type: 'vec3', default: {x: 0, y: 20, z: 0}},
+        respawnRotation: {type: 'vec3', default: {x: 0, y: 0, z: 0}}
     },
+
+    originalPhysicsType: '',
 
     init: function() {
 
+        var physicsType = this.getPhysicsType();
+
+        if(physicsType !== 'none'){
+            this.originalPhysicsType = this.el.getAttribute(physicsType);
+        }
     },
 
     tick: function() {
 
         var position = this.el.object3D.position;
 
-        if(position.y < this.data.height){
-            this.el.setAttribute('position','0 20 0');
+        //console.log(position.y,this.data.fallHeight);
+
+        if(position.y < this.data.fallHeight){
+
+            var physicsType = this.getPhysicsType();
+
+            if(physicsType === 'dynamic-body'){
+                this.el.removeAttribute(physicsType);
+                setTimeout(function(){
+                    this.el.setAttribute(physicsType,this.originalPhysicsType);
+                }.bind(this),250);
+            }
+
+            this.el.setAttribute('position',this.data.respawnPosition);
+            this.el.object3D.rotation.x = this.de2ra(this.data.respawnRotation.x);
+            this.el.object3D.rotation.y = this.de2ra(this.data.respawnRotation.y);
+            this.el.object3D.rotation.z = this.de2ra(this.data.respawnRotation.z);
+
+            this.el.emit('respawned');
         }
+    },
+
+    getPhysicsType: function(){
+        var physicsType = '';
+
+        if(this.el.hasAttribute('kinematic-body')){
+            physicsType = 'kinematic-body';
+        }else if(this.el.hasAttribute('dynamic-body')){
+            physicsType = 'dynamic-body';
+        }else{
+            physicsType = 'none';
+        }
+
+        return physicsType;
+    },
+
+    de2ra: function(degree) {
+        return degree*(Math.PI/180);
     }
 });
 },{}],2:[function(require,module,exports){
@@ -64,6 +108,146 @@ AFRAME.registerComponent('forward', {
   }
 });
 },{}],3:[function(require,module,exports){
+var ACCEL_G = -9.8, // m/s^2
+    EASING = -15; // m/s^2
+
+/**
+ * Gladeye Jump ability.
+ */
+AFRAME.registerComponent('gladeye-jump-ability', {
+  dependencies: ['velocity'],
+
+  /* Schema
+  ——————————————————————————————————————————————*/
+
+  schema: {
+    on: { default: 'keydown:Space gamepadbuttondown:0' },
+    playerHeight: { default: 1.764 },
+    maxJumps: { default: 1 },
+    distance: { default: 5 },
+    soundJump: { type: 'array', default: [] },
+    soundLand: { type: 'array', default: [] },
+    soundFalling: { type: 'array', default: [] },
+    debug: { default: false }
+  },
+
+  init: function () {
+
+    this.velocity = 0;
+    this.numJumps = 0;
+
+    this.landed = 0;
+    this.falling = 0;
+
+    var beginJump = this.beginJump.bind(this),
+        events = this.data.on.split(' ');
+    this.bindings = {};
+    for (var i = 0; i <  events.length; i++) {
+      this.bindings[events[i]] = beginJump;
+      this.el.addEventListener(events[i], beginJump);
+    }
+    this.bindings.collide = this.onCollide.bind(this);
+    this.el.addEventListener('collide', this.bindings.collide);
+  },
+
+  remove: function () {
+    for (var event in this.bindings) {
+      if (this.bindings.hasOwnProperty(event)) {
+        this.el.removeEventListener(event, this.bindings[event]);
+        delete this.bindings[event];
+      }
+    }
+    this.el.removeEventListener('collide', this.bindings.collide);
+    delete this.bindings.collide;
+  },
+
+  beginJump: function () {
+    if (this.numJumps < this.data.maxJumps) {
+      this.playJumpSound();
+      var data = this.data,
+          initialVelocity = Math.sqrt(-2 * data.distance * (ACCEL_G + EASING)),
+          v = this.el.getAttribute('velocity');
+      this.el.setAttribute('velocity', {x: v.x, y: initialVelocity, z: v.z});
+      this.landed = 0;
+      this.numJumps++;
+    }
+  },
+
+  onCollide: function () {
+    // TODO look into whether we can confirm the face we collided with is a top or side 
+    this.numJumps = 0;
+    this.stopFallingSound();
+    this.playLandSound();
+    // Grounded player
+    this.landed = 1;
+    this.falling = 0;
+  },
+
+  playJumpSound: function() {
+
+    if(this.data.soundJump.length >= 1){
+
+      var soundArray = this.data.soundJump;
+      var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+
+      this.el.setAttribute('sound','src',soundArray[randomKey]);
+
+      this.el.components.sound.playSound();
+    }
+  },
+
+  playLandSound: function() {
+
+    if(this.data.soundLand.length >= 1){
+      var soundArray = this.data.soundLand;
+      var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+
+      this.el.setAttribute('sound',
+        {
+          src: soundArray[randomKey],
+          positional: false
+        }
+      );
+
+      this.el.components.sound.playSound();
+    }
+  },
+
+  playFallingSound: function() {
+
+    if(this.data.soundFalling.length >= 1){
+      var soundArray = this.data.soundFalling;
+      var randomKey = Math.floor(Math.random() * (soundArray.length - 1 + 1)) + 0;
+
+      this.el.setAttribute('sound',
+        {
+          src: soundArray[randomKey],
+          positional: false
+        }
+      );
+
+      this.el.components.sound.playSound();
+    }
+  },
+
+  stopFallingSound: function() {
+    if(this.data.soundFalling.length >= 1){
+      this.el.components.sound.stopSound();
+    }
+  },
+
+  tick: function(){
+
+    if(this.landed == 0 && this.falling == 0 && this.el.body.velocity.y <= -16){
+      this.falling = 1;
+      this.playFallingSound();
+    }
+
+    this.previousVelocity = this.el.body.velocity.y;
+  }
+
+});
+},{}],4:[function(require,module,exports){
 AFRAME.registerComponent('gun', {
     schema: {
         bulletTemplate: {default: '#bullet-template'},
@@ -170,12 +354,11 @@ AFRAME.registerComponent('gun', {
             hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
         });*/
 
-        this.playExplodeSound(hitEl);
+        this.explodeVoxel(hitEl);
 
-        setTimeout(function(){
+        //setTimeout(function(){
             hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
-        },150);
-
+        //},150);
 
 
         bulletEl.parentNode.removeChild(bulletEl);
@@ -202,10 +385,67 @@ AFRAME.registerComponent('gun', {
         hitEl.setAttribute('sound','src',soundArray[randomKey]);
 
         hitEl.components.sound.playSound();
-    }
+    },
+
+    explodeVoxel: function(hitEl) {
+
+        this.playExplodeSound(hitEl);
+
+        var explosionPoint = hitEl.object3D.getWorldPosition(); // impulse center point
+        var explosionFragmentsAmount = 11;
+
+        var i=0;
+        while( i <= explosionFragmentsAmount){
+
+            var fragmentPositionRadomisers = {
+                x: parseFloat((Math.random() * (0.1 - 0.5) + 0.5).toFixed(4)),
+                y: parseFloat((Math.random() * ((-0.3) - 0.3) + 1).toFixed(4)),
+                z: parseFloat((Math.random() * (0.1 - 0.5) + 0.5).toFixed(4))
+            }
+
+            // randomize positive/negative values for X/Z axes only 
+            // so voxels on the ground level don't create fragments below the ground
+            fragmentPositionRadomisers.x *= Math.floor(Math.random()*2) == 1 ? 1 : -1; // this will add minus sign in 50% of cases
+            fragmentPositionRadomisers.z *= Math.floor(Math.random()*2) == 1 ? 1 : -1;
+
+            let fragmentPosition = {
+                x: explosionPoint.x+fragmentPositionRadomisers.x, 
+                y: explosionPoint.y,//+fragmentPositionRadomisers.y, 
+                z: explosionPoint.z+fragmentPositionRadomisers.z
+            };
+
+            var fragment = document.createElement('a-entity');
+
+            var fragmentColours = ['#CCC', '#666', '#444', '#888', '#111', '#222', '#333', '#777', '#AAA', '#632f02', '#40342a'];
+            var randomColour = fragmentColours[Math.floor(Math.random() * fragmentColours.length)];
+
+            var fragmentSizes = [0.075, 0.05, 0.025, 0.01];
+            var randomSize = fragmentSizes[Math.floor(Math.random() * fragmentSizes.length)];
+
+            fragment.setAttribute('class', 'voxelFragment'+i);
+            fragment.setAttribute('position', fragmentPosition);
+            fragment.setAttribute('geometry', { primitive: 'box', height: randomSize, width: randomSize, depth: randomSize });
+            fragment.setAttribute('remove-in-seconds', 3);
+            fragment.setAttribute('material', { color: randomColour });
+
+            hitEl.sceneEl.appendChild(fragment);
+
+            fragment.setAttribute('dynamic-body', 'mass: 1');
+
+            fragment.addEventListener('body-loaded', function(fragEvent){
+                var frag = this;
+                setTimeout(function () {
+                    frag.body.applyImpulse(new CANNON.Vec3(Math.random()*2-1, Math.random()*2-1, Math.random()*2-1), explosionPoint);
+                }, 0);
+            });
+
+            i++;
+        }
+        
+    },
 
 });
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /**
  * Spawn entity at the intersection point on click, given the properties passed.
  *
@@ -291,7 +531,7 @@ AFRAME.registerComponent('intersection-spawn-multi', {
   }
 });
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /* global AFRAME */
 
 if (typeof AFRAME === 'undefined') {
@@ -437,56 +677,7 @@ AFRAME.registerSystem('main', {
 
         this.optimizeMobile();
 
-        //var gameFloor = document.querySelector('#environment-collision1');
-
-        // var gameFloorWidth = parseInt(gameFloor.getAttribute('width'));
-        // var gameFloorDepth = parseInt(gameFloor.getAttribute('depth'));
-
-        // var TeamOneRelic = {x: (gameFloorWidth/2)+(Math.floor(Math.Random * 2)+1), y: 2, z: (gameFloorDepth/2)+(Math.floor(Math.Random * 2)+1)};
-        // var TeamTwoRelic = {x: gameFloorWidth/2, y: 2, z: gameFloorDepth/2}; //(Math.floor(Math.random() * 2) + 1  )
-
-
-        var parentEntity = document.createElement('a-entity');
-        parentEntity.setAttribute('position', '12 2 12');
-
-        var emptyEntity = document.createElement('a-entity');
-        emptyEntity.setAttribute('class', 'relic');
-        emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
-        emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
-        emptyEntity.setAttribute('static-body', '');
-
-                    
-        var entity = document.createElement('a-entity');
-        entity.setAttribute('class', 'relic');
-        entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
-        entity.setAttribute('scale', '5 5 5');
-        entity.setAttribute('shadow', 'receive: false');
-        entity.setAttribute('static-body',  '');
-        entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
-        parentEntity.appendChild(entity);
-        parentEntity.appendChild(emptyEntity);
-        sceneEl.appendChild(parentEntity);
-
-        var parentEntity = document.createElement('a-entity');
-        parentEntity.setAttribute('position', '-12 2 -12');
-
-        var emptyEntity = document.createElement('a-entity');
-        emptyEntity.setAttribute('class', 'relic');
-        emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
-        emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
-        emptyEntity.setAttribute('static-body', '');
-
-        var entity = document.createElement('a-entity');
-        entity.setAttribute('class', 'relic');
-        entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
-        entity.setAttribute('scale', '5 5 5');
-        entity.setAttribute('shadow', 'receive: false');
-        entity.setAttribute('static-body',  '');
-        entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
-        parentEntity.appendChild(entity);
-        parentEntity.appendChild(emptyEntity);
-        sceneEl.appendChild(parentEntity); 
-
+        this.spawnRelics(sceneEl);
 
         var playerEl = document.getElementById('player');
         playerEl.addEventListener('relic-hit', this.onRelicHit.bind(this));
@@ -633,9 +824,62 @@ AFRAME.registerSystem('main', {
             }
 
         }
+    },
+
+    spawnRelics: function(sceneEl) {
+
+        var gameFloor = document.querySelector('#environment-collision1');
+
+        var gameFloorWidth = parseInt(gameFloor.getAttribute('width'));
+        var gameFloorDepth = parseInt(gameFloor.getAttribute('depth')); // unused for now
+
+        var i = 0;
+        while( i <= 1 ){
+
+            /**
+            *   WARNING: 
+            *   Currently assumes the width/depth are equal (arena is square)
+            */
+
+            var randomSpot = Math.floor(Math.random()*(gameFloorWidth/2)) + 1; // this will get a number between 1 and (gameFloorWidth/2)
+            randomSpot *= Math.floor(Math.random()*2) == 1 ? 1 : -1; // this will add minus sign in 50% of cases
+
+            // Spawn the relic on opposite sides of the arena, at a random point on the Z axis
+            var relicPosition = '11 2 '+randomSpot;
+
+            if( i == 1){
+                relicPosition = '-11 2 '+randomSpot; // @TODO figure out a nicer way to handle X axis for these
+                                                    // Think about how this can be factored into number of teams playing
+            }
+
+            var parentEntity = document.createElement('a-entity');
+            parentEntity.setAttribute('position', relicPosition);
+
+            var emptyEntity = document.createElement('a-entity');
+            emptyEntity.setAttribute('class', 'relic');
+            emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
+            emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
+            emptyEntity.setAttribute('static-body', '');
+
+                        
+            var entity = document.createElement('a-entity');
+            entity.setAttribute('class', 'relic');
+            entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
+            entity.setAttribute('scale', '5 5 5');
+            entity.setAttribute('shadow', 'receive: false');
+            entity.setAttribute('static-body',  '');
+            entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
+            parentEntity.appendChild(entity);
+            parentEntity.appendChild(emptyEntity);
+
+            console.log('spawning relic: '+i+' at position '+ relicPosition);
+            sceneEl.appendChild(parentEntity);
+
+            i++;      
+        }
     }
 });
-},{"aframe-extras":9,"aframe-physics-system":50}],6:[function(require,module,exports){
+},{"aframe-extras":11,"aframe-physics-system":52}],7:[function(require,module,exports){
 /**
  * Snap entity to the closest interval specified by `snap`.
  * Offset entity by `offset`.
@@ -669,7 +913,7 @@ AFRAME.registerComponent('snap', {
 
     }
 });
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 (function (global){
 var AFRAME = require('aframe');
 
@@ -683,7 +927,7 @@ require('aframe-environment-component/index.js');
 require('aframe-gradient-sky');
 require('aframe-randomizer-components');
 require('aframe-particle-system-component');
-require('aframe-preloader-component');
+require('@gladeye/aframe-preloader-component');
 //require('./components/aframe-preloader-component');
 
 require('./components/auto-fall-respawn');
@@ -691,10 +935,359 @@ require('./components/intersection-spawn-multi');
 require('./components/snap');
 require('./components/forward.component');
 require('./components/gun.component');
+require('./components/gladeye-jump-ability');
 require('./components/main');
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./components/auto-fall-respawn":1,"./components/forward.component":2,"./components/gun.component":3,"./components/intersection-spawn-multi":4,"./components/main":5,"./components/snap":6,"aframe":63,"aframe-environment-component/index.js":8,"aframe-gradient-sky":47,"aframe-particle-system-component":48,"aframe-preloader-component":61,"aframe-randomizer-components":62,"bootstrap":64,"jquery":134,"networked-aframe":135,"networked-aframe/server/static/js/remove-in-seconds.component":136,"networked-aframe/server/static/js/spawn-in-circle.component":137}],8:[function(require,module,exports){
+},{"./components/auto-fall-respawn":1,"./components/forward.component":2,"./components/gladeye-jump-ability":3,"./components/gun.component":4,"./components/intersection-spawn-multi":5,"./components/main":6,"./components/snap":7,"@gladeye/aframe-preloader-component":9,"aframe":64,"aframe-environment-component/index.js":10,"aframe-gradient-sky":49,"aframe-particle-system-component":50,"aframe-randomizer-components":63,"bootstrap":65,"jquery":135,"networked-aframe":136,"networked-aframe/server/static/js/remove-in-seconds.component":137,"networked-aframe/server/static/js/spawn-in-circle.component":138}],9:[function(require,module,exports){
+/* global AFRAME */
+
+if (typeof AFRAME === 'undefined') {
+    throw new Error('Component attempted to register before AFRAME was available.');
+}
+
+// First, checks if it isn't implemented yet.
+if (!String.prototype.format) {
+    String.prototype.format = function() {
+        var args = arguments;
+        return this.replace(/{(\d+)}/g, function(match, number) {
+            return typeof args[number] != 'undefined'
+                ? args[number]
+                : match
+                ;
+        });
+    };
+}
+
+/**
+ * Visual preloader system for A-Frame.
+ *
+ * When applied to the <scene> will automatically display a preloader modal that reflects the current loading progress
+ * of resources in <a-assets> that have been flagged for preloading and will auto-close the modal when it reaches 100%.
+ * Alternately, the modal can be manually closed
+ *
+ * Emits a 'preloading-complete' event when done.
+ */
+AFRAME.registerSystem('preloader', {
+    schema: {
+        type: { type: 'string', default: 'bootstrap' }, //type of CSS framework to use - acceptable values are: 'bootstrap' or 'custom'
+        id: {type: 'string', default: 'preloader-modal'}, //ID of the auto injected preloader modal
+        autoInject: { type: 'boolean', default: true }, //whether or not to auto-inject the preloader html into the page
+        target: { type: 'selector', default: '#preloader-modal'}, //the html target selector
+        progressValueAttr:  { type: 'string', default: 'aria-valuenow' },//an attribute of the progress bar to set when progress is updated
+        barProgressStyle: { type: 'string', default: 'width'}, //target css style to set as a percentage on the bar
+        bar: { type: 'selector', default: '#preloader-modal .progress-bar'}, //html class of progress bar in preloader - used to set the width
+        label: { type: 'selector', default: '#preloader-modal .progress-label'}, //html class of label in preloader - used to set the percentage
+        labelText: { type: 'string', default: '{0}% Complete'}, //loading text format {0} will be replaced with the percent progress e.g. 30%
+        autoClose: { type: 'boolean', default: true}, //automatically close preloader by default - not supported if clickToClose is set to 'true'
+        clickToClose: { type: 'boolean', default: false}, //whether the user must click a button to close the modal when preloading is finished
+        closeLabelText: { type: 'string', default: 'Continue'}, //default label text of click to close button
+        title: { type: 'string', default: ''}, //title of preloader modal
+        debug: { type: 'boolean', default: false}, //whether or not to enable logging to console
+        disableVRModeUI: { type: 'boolean', default: true}, //whether or not to disable VR Mode UI when preloading
+        slowLoad: { type: 'boolean', default: false}, //deliberately slow down the load progress by adding 2 second delays before updating progress - used to showcase loader on fast connections and should not be enabled in production
+        doneLabelText: { type: 'string', default: 'Done'} //text to set on label when loading is complete
+    },
+
+    /**
+     * Set if component needs multiple instancing.
+     */
+    multiple: false,
+
+    loadedAssetCount: 0, //total number of assets loaded
+    totalAssetCount: 0, //total number of assets to load
+    slowLoadTimeAssetUpdate: 1000, //length of time to slow down asset load progress if slowLoad is set to 'true'
+    slowLoadTimePreloadFinish: 4000, //length of time to slow down preload finish if slowLoad is set to 'true'
+
+    /**
+     * Called once when component is attached. Generally for initial setup.
+     */
+    init: function () {
+
+        if(this.data.debug){
+            console.log('Initialized preloader');
+        }
+
+        if(this.data.type === 'bootstrap' && typeof $ === 'undefined'){
+            console.error('jQuery is not present, cannot instantiate Bootstrap modal for preloader!');
+        }
+
+        document.querySelector('a-assets').addEventListener('loaded',function(){
+            if(this.data.debug){
+                console.info('All assets loaded');
+            }
+            this.triggerProgressComplete();
+
+        }.bind(this));
+
+        var assetItems = document.querySelectorAll('a-assets a-asset-item,a-assets img,a-assets audio,a-assets video');
+
+        this.totalAssetCount = assetItems.length;
+
+        this.watchPreloadProgress(assetItems);
+
+        if(!this.data.target && this.data.autoInject){
+            if(this.data.debug){
+                console.info('No preloader html found, auto-injecting');
+            }
+            this.injectHTML();
+        }else{
+            switch(this.data.type){
+                case 'bootstrap':
+                    this.initBootstrapModal($(this.data.target));
+                    break;
+                default:
+                    //do nothing
+                    break;
+            }
+        }
+
+        if(this.data.disableVRModeUI){
+            this.el.setAttribute('vr-mode-ui','enabled','false');
+        }
+    },
+
+    /**
+     * Called when component is attached and when component data changes.
+     * Generally modifies the entity based on the data.
+     */
+    update: function (oldData) { },
+
+    /**
+     *
+     * @param assetItems A NodeList with a list of <a-asset-item> elements that you wish to watch
+     */
+    watchPreloadProgress: function(assetItems){
+        for (var a = 0; a < assetItems.length; a++) {
+
+            var eventName;
+
+            switch(assetItems[a].nodeName){
+                case 'A-ASSET-ITEM':
+                    eventName = 'loaded';
+                    break;
+                case 'img':
+                    eventName = 'load';
+                    break;
+                case 'audio':
+                case 'video':
+                    eventName = 'loadeddata';
+                    break;
+            }
+
+            assetItems[a].addEventListener(eventName,function(e){
+                this.loadedAssetCount++;
+                if(this.data.debug) {
+                    console.info('Loaded ' + this.loadedAssetCount + '/' + this.totalAssetCount + ' asset items');
+                }
+                this.onAssetLoaded();
+            }.bind(this));
+        }
+    },
+
+    onAssetLoaded: function(){
+        if(this.loadedAssetCount === this.totalAssetCount){
+            this.triggerProgressComplete();
+        }else{
+            var percentage = Math.floor(this.loadedAssetCount/this.totalAssetCount*100);
+            if(this.data.slowLoad) {
+                setTimeout(function () {
+                    this.drawProgress(percentage);
+                }.bind(this), this.slowLoadTimeAssetUpdate)
+            }else{
+                this.drawProgress(percentage);
+            }
+        }
+    },
+
+    triggerProgressComplete: function(){
+
+        if(this.data.slowLoad){
+            setTimeout(function(){
+                if(this.data.type === 'bootstrap') $(this.data.bar).addClass('progress-bar-success');
+                this.drawProgress(100);
+                this.data.target.classList.add('preloader-modal__complete');
+            }.bind(this),this.slowLoadTimePreloadFinish-1000);
+        }else{
+            if(this.data.type === 'bootstrap') $(this.data.bar).addClass('progress-bar-success');
+            this.drawProgress(100);
+            this.data.target.classList.add('preloader-modal__complete');
+        }
+
+        if(this.data.autoClose && !this.data.clickToClose){
+            if(this.data.slowLoad){
+                setTimeout(function(){
+                    this.triggerPreloadingComplete();
+                    this.closeModal();
+                }.bind(this),this.slowLoadTimePreloadFinish)
+            }else{
+                this.triggerPreloadingComplete();
+                this.closeModal();
+            }
+
+        }else{
+            if(this.closeBtn && this.data.clickToClose){
+                if(this.data.slowLoad){
+                    setTimeout(function(){
+                        this.closeBtn.setAttribute('style','display: inline-block');
+                    }.bind(this),this.slowLoadTimePreloadFinish)
+                }else{
+                    this.closeBtn.setAttribute('style','display: inline-block');
+                }
+
+            }
+        }
+    },
+
+    drawProgress: function(percentage){
+        //update loading bar if exists
+        if(this.data.label){
+            this.data.label.innerHTML = (percentage === 100) ? this.data.doneLabelText : this.data.labelText.format(percentage);
+        }
+
+        if(this.data.bar){
+            this.data.bar.setAttribute(this.data.progressValueAttr,percentage);
+            this.data.bar.setAttribute('style',this.data.barProgressStyle+':'+percentage+'%');
+        }
+    },
+
+    injectHTML: function(){
+        switch(this.data.type){
+            case 'bootstrap':
+                this.injectBootstrapModal();
+                break;
+            default:
+                //do nothing
+                break;
+        }
+    },
+
+    injectBootstrapModal: function(){
+
+        if(this.data.debug){
+            console.info('Injecting bootstrap modal');
+        }
+
+        if(!this.data.title){
+            //full screen modal
+            var $modal = $('' +
+                '<div id="'+this.data.id+'" class="modal instructions-modal" tabindex="-1" role="dialog">'+
+                '<div class="modal-dialog modal-dialog__full" role="document">'+
+                '<div class="modal-content vertical-align text-center">'+
+                '<div class="col-xs-10 col-xs-offset-1 col-md-6 col-md-offset-3">'+
+                '<div class="progress">'+
+                '<div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">'+
+                '<span class="progress-label">Loading 0% Complete</span>'+
+                '</div>'+
+                '</div>'+
+                ((this.data.clickToClose) ? '<button type="button" class="close-btn btn btn-default" data-dismiss="modal">Continue</button>' : '' )+
+                '</div>'+
+                '</div>'+
+                '</div>'+
+                '</div>'+
+                '');
+        }else{
+            //regular modal
+            var $modal = $('' +
+                '<div id="'+this.data.id+'" class="modal instructions-modal" tabindex="-1" role="dialog">'+
+                '<div class="modal-dialog modal-dialog__full" role="document">'+
+                '<div class="modal-content">'+
+                '<div class="modal-header">'+
+                '<h4 class="modal-title">'+this.data.title+'</h4>'+
+                '</div>'+
+                '<div class="modal-body">' +
+                '<div class="col-xs-10 col-xs-offset-1 col-md-6 col-md-offset-3">'+
+                '<div class="progress">'+
+                '<div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">'+
+                '<span class="progress-label">Loading 0% Complete</span>'+
+                '</div>'+
+                '</div>'+
+                '</div>'+
+                '</div>'+
+                '<div class="modal-footer">'+
+                ((this.data.clickToClose) ? '<button type="button" class="close-btn btn btn-default" data-dismiss="modal">Continue</button>' : '' )+
+                '</div>'+
+                '</div>'+
+                '</div>'+
+                '</div>'+
+                '');
+        }
+
+        $('body').append($modal);
+
+        this.data.target = $modal[0];
+        this.data.label = $modal.find('.progress-label')[0];
+        this.data.bar = $modal.find('.progress-bar')[0];
+
+        this.initBootstrapModal($modal);
+    },
+
+    initBootstrapModal: function($modal){
+        $modal.modal({
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        if(!this.data.title){
+            var $modalStyle = $('<style>' +
+                '.vertical-align {'+
+                'display: flex;'+
+                'align-items: center;'+
+                '}'+
+                '.modal-dialog__full {'+
+                'width: 100%;'+
+                'height: 100%;'+
+                'margin: 0;'+
+                'padding: 0;'+
+                '}'+
+                '.modal-dialog__full .modal-content {'+
+                'height: auto;'+
+                'min-height: 100%;'+
+                'border-radius: 0;'+
+                '}' +
+                '</style>');
+            $('head').append($modalStyle);
+        }
+
+        if(this.data.clickToClose){
+            var $closeBtn = $modal.find('[data-dismiss=modal]');
+
+            if($closeBtn.length > 0){
+                this.closeBtn = $closeBtn[0];
+
+                this.closeBtn.setAttribute('style','display: none');
+
+                $modal.on('hidden.bs.modal', function (e) {
+                    this.triggerPreloadingComplete();
+                }.bind(this))
+            }else{
+                console.error('No Bootstrap modal close button is set in the HTML. Please add a button with the data-dismiss="modal" attribute to use clickToClose.');
+            }
+        }
+    },
+
+    triggerPreloadingComplete: function(){
+        if(this.data.debug){
+            console.info('Preloading complete');
+        }
+        if(this.data.disableVRModeUI){
+            this.el.setAttribute('vr-mode-ui','enabled','true');
+        }
+        this.el.emit('preloading-complete');
+    },
+
+    closeModal: function(){
+        switch(this.data.type){
+            case 'bootstrap':
+                $(this.data.target).modal('hide');
+                break;
+            default:
+                //do nothing
+                break;
+        }
+    }
+});
+},{}],10:[function(require,module,exports){
 /* global AFRAME, THREE */
 
 if (typeof AFRAME === 'undefined') {
@@ -1969,7 +2562,7 @@ PerlinNoise.prototype.noise = function(x, y, z) {
   return nxyz; 
 };
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 module.exports = {
   controls:   require('./src/controls'),
   loaders:    require('./src/loaders'),
@@ -1986,7 +2579,7 @@ module.exports = {
   }
 };
 
-},{"./src/controls":21,"./src/loaders":29,"./src/misc":37,"./src/primitives":46,"aframe-physics-system":50}],10:[function(require,module,exports){
+},{"./src/controls":23,"./src/loaders":31,"./src/misc":39,"./src/primitives":48,"aframe-physics-system":52}],12:[function(require,module,exports){
 /**
  * @author yamahigashi https://github.com/yamahigashi
  * @author Kyle-Larson https://github.com/Kyle-Larson
@@ -5150,7 +5743,7 @@ module.exports = {
 } )();
 
 
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 module.exports = Object.assign(function GamepadButton () {}, {
 	FACE_1: 0,
 	FACE_2: 1,
@@ -5173,7 +5766,7 @@ module.exports = Object.assign(function GamepadButton () {}, {
 	VENDOR: 16,
 });
 
-},{}],12:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 function GamepadButtonEvent (type, index, details) {
   this.type = type;
   this.index = index;
@@ -5183,7 +5776,7 @@ function GamepadButtonEvent (type, index, details) {
 
 module.exports = GamepadButtonEvent;
 
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 /**
  * @author Wei Meng / http://about.me/menway
  *
@@ -5663,7 +6256,7 @@ THREE.PLYLoader.prototype = {
 
 };
 
-},{}],14:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 module.exports={
   "size": 5,
   "cellSize": 10,
@@ -5735,7 +6328,7 @@ module.exports={
     }]
 }
 
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 /**
  * Source: https://github.com/Adobe-Marketing-Cloud/fetch-script
  */
@@ -5812,12 +6405,12 @@ function fetchScript(settings) {
 
 module.exports = fetchScript;
 
-},{}],16:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 var vg=module.exports={VERSION:"0.1.1",PI:Math.PI,TAU:2*Math.PI,DEG_TO_RAD:.0174532925,RAD_TO_DEG:57.2957795,SQRT3:Math.sqrt(3),TILE:"tile",ENT:"entity",STR:"structure",HEX:"hex",SQR:"square",ABS:"abstract"};vg.Board=function(e,t){if(!e)throw new Error("You must pass in a grid system for the board to use.");this.tiles=[],this.tileGroup=null,this.group=new THREE.Object3D,this.grid=null,this.overlay=null,this.finder=new vg.AStarFinder(t),vg.Loader.init(),this.setGrid(e)},vg.Board.prototype={setEntityOnTile:function(e,t){var i=this.grid.cellToPixel(t.cell);e.position.copy(i),e.position.y+=e.heightOffset||0,e.tile&&(e.tile.entity=null),e.tile=t,t.entity=e},addTile:function(e){var t=this.tiles.indexOf(e);-1===t&&(this.tiles.push(e),this.snapTileToGrid(e),e.position.y=0,this.tileGroup.add(e.mesh),this.grid.add(e.cell),e.cell.tile=e)},removeTile:function(e){if(e){var t=this.tiles.indexOf(e);this.grid.remove(e.cell),-1!==t&&this.tiles.splice(t,1),e.dispose()}},removeAllTiles:function(){if(this.tileGroup)for(var e=this.tileGroup.children,t=0;t<e.length;t++)this.tileGroup.remove(e[t])},getTileAtCell:function(e){var t=this.grid.cellToHash(e);return e.tile||("undefined"!=typeof this.grid.cells[t]?this.grid.cells[t].tile:null)},snapToGrid:function(e){var t=this.grid.pixelToCell(e);e.copy(this.grid.cellToPixel(t))},snapTileToGrid:function(e){if(e.cell)e.position.copy(this.grid.cellToPixel(e.cell));else{var t=this.grid.pixelToCell(e.position);e.position.copy(this.grid.cellToPixel(t))}return e},getRandomTile:function(){var e=vg.Tools.randomInt(0,this.tiles.length-1);return this.tiles[e]},findPath:function(e,t,i){return this.finder.findPath(e.cell,t.cell,i,this.grid)},setGrid:function(e){this.group.remove(this.tileGroup),this.grid&&e!==this.grid&&(this.removeAllTiles(),this.tiles.forEach(function(e){this.grid.remove(e.cell),e.dispose()}),this.grid.dispose()),this.grid=e,this.tiles=[],this.tileGroup=new THREE.Object3D,this.group.add(this.tileGroup)},generateOverlay:function(e){var t=new THREE.LineBasicMaterial({color:0,opacity:.3});this.overlay&&this.group.remove(this.overlay),this.overlay=new THREE.Object3D,this.grid.generateOverlay(e,this.overlay,t),this.group.add(this.overlay)},generateTilemap:function(e){this.reset();var t=this.grid.generateTiles(e);this.tiles=t,this.tileGroup=new THREE.Object3D;for(var i=0;i<t.length;i++)this.tileGroup.add(t[i].mesh);this.group.add(this.tileGroup)},reset:function(){this.removeAllTiles(),this.tileGroup&&this.group.remove(this.tileGroup)}},vg.Board.prototype.constructor=vg.Board,vg.Cell=function(e,t,i,s){this.q=e||0,this.r=t||0,this.s=i||0,this.h=s||1,this.tile=null,this.userData={},this.walkable=!0,this._calcCost=0,this._priority=0,this._visited=!1,this._parent=null,this.uniqueID=vg.LinkedList.generateID()},vg.Cell.prototype={set:function(e,t,i){return this.q=e,this.r=t,this.s=i,this},copy:function(e){return this.q=e.q,this.r=e.r,this.s=e.s,this.h=e.h,this.tile=e.tile||null,this.userData=e.userData||{},this.walkable=e.walkable,this},add:function(e){return this.q+=e.q,this.r+=e.r,this.s+=e.s,this},equals:function(e){return this.q===e.q&&this.r===e.r&&this.s===e.s}},vg.Cell.prototype.constructor=vg.Cell,vg.HexGrid=function(e){e=e||{},this.type=vg.HEX,this.size=5,this.cellSize="undefined"==typeof e.cellSize?10:e.cellSize,this.cells={},this.numCells=0,this.extrudeSettings=null,this.autogenerated=!1;var t,i=[];for(t=0;6>t;t++)i.push(this._createVertex(t));for(this.cellShape=new THREE.Shape,this.cellShape.moveTo(i[0].x,i[0].y),t=1;6>t;t++)this.cellShape.lineTo(i[t].x,i[t].y);this.cellShape.lineTo(i[0].x,i[0].y),this.cellShape.autoClose=!0,this.cellGeo=new THREE.Geometry,this.cellGeo.vertices=i,this.cellGeo.verticesNeedUpdate=!0,this.cellShapeGeo=new THREE.ShapeGeometry(this.cellShape),this._cellWidth=2*this.cellSize,this._cellLength=.5*vg.SQRT3*this._cellWidth,this._hashDelimeter=".",this._directions=[new vg.Cell(1,-1,0),new vg.Cell(1,0,-1),new vg.Cell(0,1,-1),new vg.Cell(-1,1,0),new vg.Cell(-1,0,1),new vg.Cell(0,-1,1)],this._diagonals=[new vg.Cell(2,-1,-1),new vg.Cell(1,1,-2),new vg.Cell(-1,2,-1),new vg.Cell(-2,1,1),new vg.Cell(-1,-1,2),new vg.Cell(1,-2,1)],this._list=[],this._vec3=new THREE.Vector3,this._cel=new vg.Cell,this._conversionVec=new THREE.Vector3,this._geoCache=[],this._matCache=[]},vg.HexGrid.TWO_THIRDS=2/3,vg.HexGrid.prototype={cellToPixel:function(e){return this._vec3.x=e.q*this._cellWidth*.75,this._vec3.y=e.h,this._vec3.z=-((e.s-e.r)*this._cellLength*.5),this._vec3},pixelToCell:function(e){var t=e.x*(vg.HexGrid.TWO_THIRDS/this.cellSize),i=(-e.x/3+vg.SQRT3/3*e.z)/this.cellSize;return this._cel.set(t,i,-t-i),this._cubeRound(this._cel)},getCellAt:function(e){var t=e.x*(vg.HexGrid.TWO_THIRDS/this.cellSize),i=(-e.x/3+vg.SQRT3/3*e.z)/this.cellSize;return this._cel.set(t,i,-t-i),this._cubeRound(this._cel),this.cells[this.cellToHash(this._cel)]},getNeighbors:function(e,t,i){var s,n,l=this._directions.length;for(this._list.length=0,s=0;l>s;s++)this._cel.copy(e),this._cel.add(this._directions[s]),n=this.cells[this.cellToHash(this._cel)],!n||i&&!i(e,n)||this._list.push(n);if(t)for(s=0;l>s;s++)this._cel.copy(e),this._cel.add(this._diagonals[s]),n=this.cells[this.cellToHash(this._cel)],!n||i&&!i(e,n)||this._list.push(n);return this._list},getRandomCell:function(){var e,t=0,i=vg.Tools.randomInt(0,this.numCells);for(e in this.cells){if(t===i)return this.cells[e];t++}return this.cells[e]},cellToHash:function(e){return e.q+this._hashDelimeter+e.r+this._hashDelimeter+e.s},distance:function(e,t){var i=Math.max(Math.abs(e.q-t.q),Math.abs(e.r-t.r),Math.abs(e.s-t.s));return i+=t.h-e.h},clearPath:function(){var e,t;for(e in this.cells)t=this.cells[e],t._calcCost=0,t._priority=0,t._parent=null,t._visited=!1},traverse:function(e){var t;for(t in this.cells)e(this.cells[t])},generateTile:function(e,t,i){var s=Math.abs(e.h);1>s&&(s=1);var n=this._geoCache[s];n||(this.extrudeSettings.amount=s,n=new THREE.ExtrudeGeometry(this.cellShape,this.extrudeSettings),this._geoCache[s]=n);var l=new vg.Tile({size:this.cellSize,scale:t,cell:e,geometry:n,material:i});return e.tile=l,l},generateTiles:function(e){e=e||{};var t=[],i={tileScale:.95,cellSize:this.cellSize,material:null,extrudeSettings:{amount:1,bevelEnabled:!0,bevelSegments:1,steps:1,bevelSize:.5,bevelThickness:.5}};i=vg.Tools.merge(i,e),this.cellSize=i.cellSize,this._cellWidth=2*this.cellSize,this._cellLength=.5*vg.SQRT3*this._cellWidth,this.autogenerated=!0,this.extrudeSettings=i.extrudeSettings;var s,n,l;for(s in this.cells)l=this.cells[s],n=this.generateTile(l,i.tileScale,i.material),n.position.copy(this.cellToPixel(l)),n.position.y=0,t.push(n);return t},generateTilePoly:function(e){e||(e=new THREE.MeshBasicMaterial({color:2405631}));var t=new THREE.Mesh(this.cellShapeGeo,e);return this._vec3.set(1,0,0),t.rotateOnAxis(this._vec3,vg.PI/2),t},generate:function(e){e=e||{},this.size="undefined"==typeof e.size?this.size:e.size;var t,i,s,n;for(t=-this.size;t<this.size+1;t++)for(i=-this.size;i<this.size+1;i++)s=-t-i,Math.abs(t)<=this.size&&Math.abs(i)<=this.size&&Math.abs(s)<=this.size&&(n=new vg.Cell(t,i,s),this.add(n))},generateOverlay:function(e,t,i){var s,n,l,r=this.cellShape.createPointsGeometry();for(s=-e;e+1>s;s++)for(n=-e;e+1>n;n++)if(l=-s-n,Math.abs(s)<=e&&Math.abs(n)<=e&&Math.abs(l)<=e){this._cel.set(s,n,l);var h=new THREE.Line(r,i);h.position.copy(this.cellToPixel(this._cel)),h.rotation.x=90*vg.DEG_TO_RAD,t.add(h)}},add:function(e){var t=this.cellToHash(e);if(!this.cells[t])return this.cells[t]=e,this.numCells++,e},remove:function(e){var t=this.cellToHash(e);this.cells[t]&&(delete this.cells[t],this.numCells--)},dispose:function(){this.cells=null,this.numCells=0,this.cellShape=null,this.cellGeo.dispose(),this.cellGeo=null,this.cellShapeGeo.dispose(),this.cellShapeGeo=null,this._list=null,this._vec3=null,this._conversionVec=null,this._geoCache=null,this._matCache=null},load:function(e,t,i){var s=this;vg.Tools.getJSON({url:e,callback:function(e){s.fromJSON(e),t.call(i||null,e)},cache:!1,scope:s})},fromJSON:function(e){var t,i,s=e.cells;for(this.cells={},this.numCells=0,this.size=e.size,this.cellSize=e.cellSize,this._cellWidth=2*this.cellSize,this._cellLength=.5*vg.SQRT3*this._cellWidth,this.extrudeSettings=e.extrudeSettings,this.autogenerated=e.autogenerated,t=0;t<s.length;t++)i=new vg.Cell,i.copy(s[t]),this.add(i)},toJSON:function(){var e,t,i={size:this.size,cellSize:this.cellSize,extrudeSettings:this.extrudeSettings,autogenerated:this.autogenerated},s=[];for(t in this.cells)e=this.cells[t],s.push({q:e.q,r:e.r,s:e.s,h:e.h,walkable:e.walkable,userData:e.userData});return i.cells=s,i},_createVertex:function(e){var t=vg.TAU/6*e;return new THREE.Vector3(this.cellSize*Math.cos(t),this.cellSize*Math.sin(t),0)},_cubeRound:function(e){var t=Math.round(e.q),i=Math.round(e.r),s=Math.round(e.s),n=Math.abs(t-e.q),l=Math.abs(i-e.r),r=Math.abs(s-e.s);return n>l&&n>r?t=-i-s:l>r?i=-t-s:s=-t-i,this._cel.set(t,i,s)}},vg.HexGrid.prototype.constructor=vg.HexGrid,vg.SqrGrid=function(e){e=e||{},this.type=vg.SQR,this.size=5,this.cellSize="undefined"==typeof e.cellSize?10:e.cellSize,this.cells={},this.numCells=0,this.extrudeSettings=null,this.autogenerated=!1;var t=[];t.push(new THREE.Vector3),t.push(new THREE.Vector3(-this.cellSize,this.cellSize)),t.push(new THREE.Vector3(this.cellSize,this.cellSize)),t.push(new THREE.Vector3(this.cellSize,-this.cellSize)),this.cellShape=new THREE.Shape,this.cellShape.moveTo(-this.cellSize,-this.cellSize),this.cellShape.lineTo(-this.cellSize,this.cellSize),this.cellShape.lineTo(this.cellSize,this.cellSize),this.cellShape.lineTo(this.cellSize,-this.cellSize),this.cellShape.lineTo(-this.cellSize,-this.cellSize),this.cellGeo=new THREE.Geometry,this.cellGeo.vertices=t,this.cellGeo.verticesNeedUpdate=!0,this.cellShapeGeo=new THREE.ShapeGeometry(this.cellShape),this._fullCellSize=2*this.cellSize,this._hashDelimeter=".",this._directions=[new vg.Cell(1,0,0),new vg.Cell(0,-1,0),new vg.Cell(-1,0,0),new vg.Cell(0,1,0)],this._diagonals=[new vg.Cell(-1,-1,0),new vg.Cell(-1,1,0),new vg.Cell(1,1,0),new vg.Cell(1,-1,0)],this._list=[],this._vec3=new THREE.Vector3,this._cel=new vg.Cell,this._conversionVec=new THREE.Vector3,this._geoCache=[],this._matCache=[]},vg.SqrGrid.prototype={cellToPixel:function(e){return this._vec3.x=e.q*this._fullCellSize,this._vec3.y=e.h,this._vec3.z=e.r*this._fullCellSize,this._vec3},pixelToCell:function(e){var t=Math.round(e.x/this._fullCellSize),i=Math.round(e.z/this._fullCellSize);return this._cel.set(t,i,0)},getCellAt:function(e){var t=Math.round(e.x/this._fullCellSize),i=Math.round(e.z/this._fullCellSize);return this._cel.set(t,i),this.cells[this.cellToHash(this._cel)]},getNeighbors:function(e,t,i){var s,n,l=this._directions.length;for(this._list.length=0,s=0;l>s;s++)this._cel.copy(e),this._cel.add(this._directions[s]),n=this.cells[this.cellToHash(this._cel)],!n||i&&!i(e,n)||this._list.push(n);if(t)for(s=0;l>s;s++)this._cel.copy(e),this._cel.add(this._diagonals[s]),n=this.cells[this.cellToHash(this._cel)],!n||i&&!i(e,n)||this._list.push(n);return this._list},getRandomCell:function(){var e,t=0,i=vg.Tools.randomInt(0,this.numCells);for(e in this.cells){if(t===i)return this.cells[e];t++}return this.cells[e]},cellToHash:function(e){return e.q+this._hashDelimeter+e.r},distance:function(e,t){var i=Math.max(Math.abs(e.q-t.q),Math.abs(e.r-t.r));return i+=t.h-e.h},clearPath:function(){var e,t;for(e in this.cells)t=this.cells[e],t._calcCost=0,t._priority=0,t._parent=null,t._visited=!1},traverse:function(e){var t;for(t in this.cells)e(this.cells[t])},generateTile:function(e,t,i){var s=Math.abs(e.h);1>s&&(s=1);var n=this._geoCache[s];n||(this.extrudeSettings.amount=s,n=new THREE.ExtrudeGeometry(this.cellShape,this.extrudeSettings),this._geoCache[s]=n);var l=new vg.Tile({size:this.cellSize,scale:t,cell:e,geometry:n,material:i});return e.tile=l,l},generateTiles:function(e){e=e||{};var t=[],i={tileScale:.95,cellSize:this.cellSize,material:null,extrudeSettings:{amount:1,bevelEnabled:!0,bevelSegments:1,steps:1,bevelSize:.5,bevelThickness:.5}};i=vg.Tools.merge(i,e),this.cellSize=i.cellSize,this._fullCellSize=2*this.cellSize,this.autogenerated=!0,this.extrudeSettings=i.extrudeSettings;var s,n,l;for(s in this.cells)l=this.cells[s],n=this.generateTile(l,i.tileScale,i.material),n.position.copy(this.cellToPixel(l)),n.position.y=0,t.push(n);return t},generateTilePoly:function(e){e||(e=new THREE.MeshBasicMaterial({color:2405631}));var t=new THREE.Mesh(this.cellShapeGeo,e);return this._vec3.set(1,0,0),t.rotateOnAxis(this._vec3,vg.PI/2),t},generate:function(e){e=e||{},this.size="undefined"==typeof e.size?this.size:e.size;var t,i,s,n=Math.ceil(this.size/2);for(t=-n;n>t;t++)for(i=-n;n>i;i++)s=new vg.Cell(t,i+1),this.add(s)},generateOverlay:function(e,t,i){var s,n,l=Math.ceil(e/2);for(s=-l;l>s;s++)for(n=-l;l>n;n++){this._cel.set(s,n);var r=new THREE.Line(this.cellGeo,i);r.position.copy(this.cellToPixel(this._cel)),r.rotation.x=90*vg.DEG_TO_RAD,t.add(r)}},add:function(e){var t=this.cellToHash(e);if(!this.cells[t])return this.cells[t]=e,this.numCells++,e},remove:function(e){var t=this.cellToHash(e);this.cells[t]&&(delete this.cells[t],this.numCells--)},dispose:function(){this.cells=null,this.numCells=0,this.cellShape=null,this.cellGeo.dispose(),this.cellGeo=null,this.cellShapeGeo.dispose(),this.cellShapeGeo=null,this._list=null,this._vec3=null,this._conversionVec=null,this._geoCache=null,this._matCache=null},load:function(e,t,i){vg.Tools.getJSON({url:e,callback:function(e){this.fromJSON(e),t.call(i||null,e)},cache:!1,scope:this})},fromJSON:function(e){var t,i,s=e.cells;for(this.cells={},this.numCells=0,this.size=e.size,this.cellSize=e.cellSize,this._fullCellSize=2*this.cellSize,this.extrudeSettings=e.extrudeSettings,this.autogenerated=e.autogenerated,t=0;t<s.length;t++)i=new vg.Cell,i.copy(s[t]),this.add(i)},toJSON:function(){var e,t,i={size:this.size,cellSize:this.cellSize,extrudeSettings:this.extrudeSettings,autogenerated:this.autogenerated},s=[];for(t in this.cells)e=this.cells[t],s.push({q:e.q,r:e.r,s:e.s,h:e.h,walkable:e.walkable,userData:e.userData});return i.cells=s,i}},vg.SqrGrid.prototype.constructor=vg.SqrGrid,vg.Tile=function(e){e=e||{};var t={cell:null,geometry:null,material:null};if(t=vg.Tools.merge(t,e),!t.cell||!t.geometry)throw new Error("Missing vg.Tile configuration");this.cell=t.cell,this.cell.tile&&this.cell.tile!==this&&this.cell.tile.dispose(),this.cell.tile=this,this.uniqueID=vg.Tools.generateID(),this.geometry=t.geometry,this.material=t.material,this.material||(this.material=new THREE.MeshPhongMaterial({color:vg.Tools.randomizeRGB("30, 30, 30",13)})),this.objectType=vg.TILE,this.entity=null,this.userData={},this.selected=!1,this.highlight="0x0084cc",this.mesh=new THREE.Mesh(this.geometry,this.material),this.mesh.userData.structure=this,this.position=this.mesh.position,this.rotation=this.mesh.rotation,this.rotation.x=-90*vg.DEG_TO_RAD,this.mesh.scale.set(t.scale,t.scale,1),this.material.emissive?this._emissive=this.material.emissive.getHex():this._emissive=null},vg.Tile.prototype={select:function(){return this.material.emissive&&this.material.emissive.setHex(this.highlight),this.selected=!0,this},deselect:function(){return null!==this._emissive&&this.material.emissive&&this.material.emissive.setHex(this._emissive),this.selected=!1,this},toggle:function(){return this.selected?this.deselect():this.select(),this},dispose:function(){this.cell&&this.cell.tile&&(this.cell.tile=null),this.cell=null,this.position=null,this.rotation=null,this.mesh.parent&&this.mesh.parent.remove(this.mesh),this.mesh.userData.structure=null,this.mesh=null,this.material=null,this.userData=null,this.entity=null,this.geometry=null,this._emissive=null}},vg.Tile.prototype.constructor=vg.Tile,function(){var e=function(){this.obj=null,this.next=null,this.prev=null,this.free=!0},t=function(){this.first=null,this.last=null,this.length=0,this.objToNodeMap={},this.uniqueID=Date.now()+""+Math.floor(1e3*Math.random()),this.sortArray=[]};t.generateID=function(){return Math.random().toString(36).slice(2)+Date.now()},t.prototype={getNode:function(e){return this.objToNodeMap[e.uniqueID]},addNode:function(i){var s=new e;if(!i.uniqueID)try{i.uniqueID=t.generateID()}catch(n){return console.error("[LinkedList.addNode] obj passed is immutable: cannot attach necessary identifier"),null}return s.obj=i,s.free=!1,this.objToNodeMap[i.uniqueID]=s,s},swapObjects:function(e,t){this.objToNodeMap[e.obj.uniqueID]=null,this.objToNodeMap[t.uniqueID]=e,e.obj=t},add:function(e){var t=this.objToNodeMap[e.uniqueID];if(t){if(t.free===!1)return;t.obj=e,t.free=!1,t.next=null,t.prev=null}else t=this.addNode(e);if(this.first){if(!this.last)throw new Error("[LinkedList.add] No last in the list -- that shouldn't happen here");this.last.next=t,t.prev=this.last,this.last=t,t.next=null}else this.first=t,this.last=t,t.next=null,t.prev=null;this.length++,this.showDebug&&this.dump("after add")},has:function(e){return!!this.objToNodeMap[e.uniqueID]},moveUp:function(e){this.dump("before move up");var t=this.getNode(e);if(!t)throw"Oops, trying to move an object that isn't in the list";if(t.prev){var i=t.prev,s=i.prev;t==this.last&&(this.last=i);var n=t.next;s&&(s.next=t),t.next=i,t.prev=i.prev,i.next=n,i.prev=t,this.first==i&&(this.first=t)}},moveDown:function(e){var t=this.getNode(e);if(!t)throw"Oops, trying to move an object that isn't in the list";if(t.next){var i=t.next;this.moveUp(i.obj),this.last==i&&(this.last=t)}},sort:function(e){var t,i,s=this.sortArray,n=this.first;for(s.length=0;n;)s.push(n.obj),n=n.next;for(this.clear(),s.sort(e),i=s.length,t=0;i>t;t++)this.add(s[t])},remove:function(e){var t=this.getNode(e);return!t||t.free?!1:(t.prev&&(t.prev.next=t.next),t.next&&(t.next.prev=t.prev),t.prev||(this.first=t.next),t.next||(this.last=t.prev),t.free=!0,t.prev=null,t.next=null,this.length--,!0)},shift:function(){var e=this.first;return 0===this.length?null:(e.prev&&(e.prev.next=e.next),e.next&&(e.next.prev=e.prev),this.first=e.next,e.next||(this.last=null),e.free=!0,e.prev=null,e.next=null,this.length--,e.obj)},pop:function(){var e=this.last;return 0===this.length?null:(e.prev&&(e.prev.next=e.next),e.next&&(e.next.prev=e.prev),this.last=e.prev,e.prev||(this.first=null),e.free=!0,e.prev=null,e.next=null,this.length--,e.obj)},concat:function(e){for(var t=e.first;t;)this.add(t.obj),t=t.next},clear:function(){for(var e=this.first;e;)e.free=!0,e=e.next;this.first=null,this.length=0},dispose:function(){for(var e=this.first;e;)e.obj=null,e=e.next;this.first=null,this.objToNodeMap=null},dump:function(e){console.log("===================="+e+"=====================");for(var t=this.first;t;)console.log("{"+t.obj.toString()+"} previous="+(t.prev?t.prev.obj:"NULL")),t=t.next();console.log("==================================="),console.log("Last: {"+(this.last?this.last.obj:"NULL")+"} First: {"+(this.first?this.first.obj:"NULL")+"}")}},t.prototype.constructor=t,vg.LinkedList=t}(),function(){var e=function(e,t,i,s,n){this._listener=t,this.isOnce=i,this.context=s,this.signal=e,this._priority=n||0};e.prototype={active:!0,params:null,execute:function(e){var t,i;return this.active&&this._listener&&(i=this.params?this.params.concat(e):e,t=this._listener.apply(this.context,i),this.isOnce&&this.detach()),t},detach:function(){return this.isBound()?this.signal.remove(this._listener,this.context):null},isBound:function(){return!!this.signal&&!!this._listener},_destroy:function(){delete this.signal,delete this._listener,delete this.context},toString:function(){return"[SignalBinding isOnce:"+this.isOnce+", isBound:"+this.isBound()+", active:"+this.active+"]"}},e.prototype.constructor=e;var t=function(){this._bindings=[],this._prevParams=null;var e=this;this.dispatch=function(){t.prototype.dispatch.apply(e,arguments)}};t.prototype={memorize:!1,_shouldPropagate:!0,active:!0,validateListener:function(e,t){if("function"!=typeof e)throw new Error("Signal: listener is a required param of {fn}() and should be a Function.".replace("{fn}",t))},_registerListener:function(t,i,s,n){var l,r=this._indexOfListener(t,s);if(-1!==r){if(l=this._bindings[r],l.isOnce!==i)throw new Error("You cannot add"+(i?"":"Once")+"() then add"+(i?"Once":"")+"() the same listener without removing the relationship first.")}else l=new e(this,t,i,s,n),this._addBinding(l);return this.memorize&&this._prevParams&&l.execute(this._prevParams),l},_addBinding:function(e){var t=this._bindings.length;do t--;while(this._bindings[t]&&e._priority<=this._bindings[t]._priority);this._bindings.splice(t+1,0,e)},_indexOfListener:function(e,t){for(var i,s=this._bindings.length;s--;)if(i=this._bindings[s],i._listener===e&&i.context===t)return s;return-1},has:function(e,t){return-1!==this._indexOfListener(e,t)},add:function(e,t,i){return this.validateListener(e,"add"),this._registerListener(e,!1,t,i)},addOnce:function(e,t,i){return this.validateListener(e,"addOnce"),this._registerListener(e,!0,t,i)},remove:function(e,t){this.validateListener(e,"remove");var i=this._indexOfListener(e,t);return-1!==i&&(this._bindings[i]._destroy(),this._bindings.splice(i,1)),e},removeAll:function(e){"undefined"==typeof e&&(e=null);for(var t=this._bindings.length;t--;)e?this._bindings[t].context===e&&(this._bindings[t]._destroy(),this._bindings.splice(t,1)):this._bindings[t]._destroy();e||(this._bindings.length=0)},getNumListeners:function(){return this._bindings.length},halt:function(){this._shouldPropagate=!1},dispatch:function(){if(this.active){var e,t=Array.prototype.slice.call(arguments),i=this._bindings.length;if(this.memorize&&(this._prevParams=t),i){e=this._bindings.slice(),this._shouldPropagate=!0;do i--;while(e[i]&&this._shouldPropagate&&e[i].execute(t)!==!1)}}},forget:function(){this._prevParams=null},dispose:function(){this.removeAll(),delete this._bindings,delete this._prevParams},toString:function(){return"[Signal active:"+this.active+" numListeners:"+this.getNumListeners()+"]"}},t.prototype.constructor=t,vg.Signal=t}(),vg.AStarFinder=function(e){e=e||{};var t={allowDiagonal:!1,heuristicFilter:null};t=vg.Tools.merge(t,e),this.allowDiagonal=t.allowDiagonal,this.heuristicFilter=t.heuristicFilter,this.list=new vg.LinkedList},vg.AStarFinder.prototype={findPath:function(e,t,i,s){var n,l,r,h,o,a;for(i=i||this.heuristicFilter,s.clearPath(),this.list.clear(),this.list.add(e);this.list.length>0;){if(this.list.sort(this.compare),n=this.list.shift(),n._visited=!0,n===t)return vg.PathUtil.backtrace(t);for(r=s.getNeighbors(n,this.allowDiagonal,i),o=0,a=r.length;a>o;o++)if(h=r[o],h.walkable&&(l=n._calcCost+s.distance(n,h),!h._visited||l<h._calcCost)){if(h._visited=!0,h._parent=n,h._calcCost=l,h._priority=l+s.distance(t,h),h===t)return vg.PathUtil.backtrace(t);this.list.add(h)}}return null},compare:function(e,t){return e._priority-t._priority}},vg.AStarFinder.prototype.constructor=vg.AStarFinder,vg.PathUtil={backtrace:function(e){for(var t=[e];e._parent;)e=e._parent,t.push(e);return t.reverse()},biBacktrace:function(e,t){var i=this.backtrace(e),s=this.backtrace(t);return i.concat(s.reverse())},pathLength:function(e){var t,i,s,n,l,r=0;for(t=1;t<e.length;++t)i=e[t-1],s=e[t],n=i[0]-s[0],l=i[1]-s[1],r+=Math.sqrt(n*n+l*l);return r},interpolate:function(e,t,i,s){var n,l,r,h,o,a,c=Math.abs,u=[];for(r=c(i-e),h=c(s-t),n=i>e?1:-1,l=s>t?1:-1,o=r-h;e!==i||t!==s;)u.push([e,t]),a=2*o,a>-h&&(o-=h,e+=n),r>a&&(o+=r,t+=l);return u},expandPath:function(e){var t,i,s,n,l,r,h=[],o=e.length;if(2>o)return h;for(l=0;o-1>l;++l)for(t=e[l],i=e[l+1],s=this.interpolate(t[0],t[1],i[0],i[1]),n=s.length,r=0;n-1>r;++r)h.push(s[r]);return h.push(e[o-1]),h},smoothenPath:function(e,t){var i,s,n,l,r,h,o,a,c,u,d,g,p=t.length,v=t[0][0],f=t[0][1],m=t[p-1][0],_=t[p-1][1];for(i=v,s=f,r=[[i,s]],o=2;p>o;++o){for(c=t[o],n=c[0],l=c[1],u=this.interpolate(i,s,n,l),g=!1,a=1;a<u.length;++a)if(d=u[a],!e.isWalkableAt(d[0],d[1])){g=!0;break}g&&(h=t[o-1],r.push(h),i=h[0],s=h[1])}return r.push([m,_]),r},compressPath:function(e){if(e.length<3)return e;var t,i,s,n,l,r,h=[],o=e[0][0],a=e[0][1],c=e[1][0],u=e[1][1],d=c-o,g=u-a;for(l=Math.sqrt(d*d+g*g),d/=l,g/=l,h.push([o,a]),r=2;r<e.length;r++)t=c,i=u,s=d,n=g,c=e[r][0],u=e[r][1],d=c-t,g=u-i,l=Math.sqrt(d*d+g*g),d/=l,g/=l,(d!==s||g!==n)&&h.push([t,i]);return h.push([c,u]),h}},vg.Loader={manager:null,imageLoader:null,crossOrigin:!1,init:function(e){this.crossOrigin=e||!1,this.manager=new THREE.LoadingManager(function(){},function(){},function(){console.warn("Error loading images")}),this.imageLoader=new THREE.ImageLoader(this.manager),this.imageLoader.crossOrigin=e},loadTexture:function(e,t,i,s){var n=new THREE.Texture(null,t);return this.imageLoader.load(e,function(e){n.image=e,n.needsUpdate=!0,i&&i(n)},null,function(e){s&&s(e)}),n.sourceFile=e,n}},vg.MouseCaster=function(e,t,i){this.down=!1,this.rightDown=!1,this.pickedObject=null,this.selectedObject=null,this.allHits=null,this.active=!0,this.shift=!1,this.ctrl=!1,this.wheel=0,this.position=new THREE.Vector3,this.screenPosition=new THREE.Vector2,this.signal=new vg.Signal,this.group=e,this._camera=t,this._raycaster=new THREE.Raycaster,this._preventDefault=!1,i=i||document,i.addEventListener("mousemove",this._onDocumentMouseMove.bind(this),!1),i.addEventListener("mousedown",this._onDocumentMouseDown.bind(this),!1),i.addEventListener("mouseup",this._onDocumentMouseUp.bind(this),!1),i.addEventListener("mousewheel",this._onMouseWheel.bind(this),!1),i.addEventListener("DOMMouseScroll",this._onMouseWheel.bind(this),!1)},vg.MouseCaster.OVER="over",vg.MouseCaster.OUT="out",vg.MouseCaster.DOWN="down",vg.MouseCaster.UP="up",vg.MouseCaster.CLICK="click",vg.MouseCaster.WHEEL="wheel",vg.MouseCaster.prototype={update:function(){if(this.active){this._raycaster.setFromCamera(this.screenPosition,this._camera);var e,t,i=this._raycaster.intersectObject(this.group,!0);i.length>0?(e=i[0],t=e.object.userData.structure,this.pickedObject!=t&&(this.pickedObject&&this.signal.dispatch(vg.MouseCaster.OUT,this.pickedObject),this.pickedObject=t,this.selectedObject=null,this.signal.dispatch(vg.MouseCaster.OVER,this.pickedObject)),this.position.copy(e.point),this.screenPosition.z=e.distance):(this.pickedObject&&this.signal.dispatch(vg.MouseCaster.OUT,this.pickedObject),this.pickedObject=null,this.selectedObject=null),this.allHits=i}},preventDefault:function(){this._preventDefault=!0},_onDocumentMouseDown:function(e){return e=e||window.event,e.preventDefault(),this._preventDefault?(this._preventDefault=!1,!1):(this.pickedObject&&(this.selectedObject=this.pickedObject),this.shift=e.shiftKey,this.ctrl=e.ctrlKey,this.down=1===e.which,this.rightDown=3===e.which,void this.signal.dispatch(vg.MouseCaster.DOWN,this.pickedObject))},_onDocumentMouseUp:function(e){return e.preventDefault(),this._preventDefault?(this._preventDefault=!1,!1):(this.shift=e.shiftKey,this.ctrl=e.ctrlKey,this.signal.dispatch(vg.MouseCaster.UP,this.pickedObject),this.selectedObject&&this.pickedObject&&this.selectedObject.uniqueID===this.pickedObject.uniqueID&&this.signal.dispatch(vg.MouseCaster.CLICK,this.pickedObject),this.down=1===e.which?!1:this.down,void(this.rightDown=3===e.which?!1:this.rightDown))},_onDocumentMouseMove:function(e){e.preventDefault(),this.screenPosition.x=e.clientX/window.innerWidth*2-1,this.screenPosition.y=2*-(e.clientY/window.innerHeight)+1},_onMouseWheel:function(e){if(this.active){e.preventDefault(),e.stopPropagation();var t=0;void 0!==e.wheelDelta?t=e.wheelDelta:void 0!==e.detail&&(t=-e.detail),t>0?this.wheel++:this.wheel--,this.signal.dispatch(vg.MouseCaster.WHEEL,this.wheel)}}},vg.MouseCaster.prototype.constructor=vg.MouseCaster,vg.Scene=function(e,t){var i={element:document.body,alpha:!0,antialias:!0,clearColor:"#fff",sortObjects:!1,fog:null,light:new THREE.DirectionalLight(16777215),lightPosition:null,cameraType:"PerspectiveCamera",cameraPosition:null,orthoZoom:4},s={minDistance:100,maxDistance:1e3,zoomSpeed:2,noZoom:!1};if(i=vg.Tools.merge(i,e),"boolean"!=typeof t&&(s=vg.Tools.merge(s,t)),this.renderer=new THREE.WebGLRenderer({alpha:i.alpha,antialias:i.antialias}),this.renderer.setClearColor(i.clearColor,0),this.renderer.sortObjects=i.sortObjects,this.width=window.innerWidth,this.height=window.innerHeight,this.orthoZoom=i.orthoZoom,this.container=new THREE.Scene,this.container.fog=i.fog,this.container.add(new THREE.AmbientLight(14540253)),i.lightPosition||i.light.position.set(-1,1,-1).normalize(),this.container.add(i.light),"OrthographicCamera"===i.cameraType){var n=window.innerWidth/this.orthoZoom,l=window.innerHeight/this.orthoZoom;this.camera=new THREE.OrthographicCamera(n/-2,n/2,l/2,l/-2,1,5e3)}else this.camera=new THREE.PerspectiveCamera(50,this.width/this.height,1,5e3);this.contolled=!!t,this.contolled&&(this.controls=new THREE.OrbitControls(this.camera,this.renderer.domElement),this.controls.minDistance=s.minDistance,this.controls.maxDistance=s.maxDistance,this.controls.zoomSpeed=s.zoomSpeed,this.controls.noZoom=s.noZoom),i.cameraPosition&&this.camera.position.copy(i.cameraPosition),window.addEventListener("resize",function(){if(this.width=window.innerWidth,this.height=window.innerHeight,"OrthographicCamera"===this.camera.type){var e=this.width/this.orthoZoom,t=this.height/this.orthoZoom;this.camera.left=e/-2,this.camera.right=e/2,this.camera.top=t/2,this.camera.bottom=t/-2}else this.camera.aspect=this.width/this.height;this.camera.updateProjectionMatrix(),this.renderer.setSize(this.width,this.height)}.bind(this),!1),this.attachTo(i.element)},vg.Scene.prototype={attachTo:function(e){e.style.width=this.width+"px",e.style.height=this.height+"px",this.renderer.setPixelRatio(window.devicePixelRatio),this.renderer.setSize(this.width,this.height),e.appendChild(this.renderer.domElement)},add:function(e){this.container.add(e)},remove:function(e){this.container.remove(e)},render:function(){this.contolled&&this.controls.update(),this.renderer.render(this.container,this.camera)},updateOrthoZoom:function(){if(this.orthoZoom<=0)return void(this.orthoZoom=0);var e=this.width/this.orthoZoom,t=this.height/this.orthoZoom;this.camera.left=e/-2,this.camera.right=e/2,this.camera.top=t/2,this.camera.bottom=t/-2,this.camera.updateProjectionMatrix()},focusOn:function(e){this.camera.lookAt(e.position)}},vg.Scene.prototype.constructor=vg.Scene,vg.SelectionManager=function(e){this.mouse=e,this.onSelect=new vg.Signal,this.onDeselect=new vg.Signal,this.selected=null,this.toggleSelection=!1,this.mouse.signal.add(this.onMouse,this)},vg.SelectionManager.prototype={select:function(e,t){e&&(t=t||!0,this.selected!==e&&this.clearSelection(t),e.selected?this.toggleSelection&&(t&&this.onDeselect.dispatch(e),e.deselect()):e.select(),this.selected=e,t&&this.onSelect.dispatch(e))},clearSelection:function(e){e=e||!0,this.selected&&(e&&this.onDeselect.dispatch(this.selected),this.selected.deselect()),this.selected=null},onMouse:function(e,t){switch(e){case vg.MouseCaster.DOWN:t||this.clearSelection();break;case vg.MouseCaster.CLICK:this.select(t)}}},vg.SelectionManager.prototype.constructor=vg.SelectionManager,vg.Tools={clamp:function(e,t,i){return Math.max(t,Math.min(i,e))},sign:function(e){return e&&e/Math.abs(e)},random:function(e,t){return 1===arguments.length?Math.random()*e-.5*e:Math.random()*(t-e)+e},randomInt:function(e,t){return 1===arguments.length?Math.random()*e-.5*e|0:Math.random()*(t-e+1)+e|0},normalize:function(e,t,i){return(e-t)/(i-t)},getShortRotation:function(e){return e%=this.TAU,e>this.PI?e-=this.TAU:e<-this.PI&&(e+=this.TAU),e},generateID:function(){return Math.random().toString(36).slice(2)+Date.now()},isPlainObject:function(e){if("object"!=typeof e||e.nodeType||e===e.window)return!1;try{if(e.constructor&&!Object.prototype.hasOwnProperty.call(e.constructor.prototype,"isPrototypeOf"))return!1}catch(t){return!1}return!0},merge:function(e,t){var i=this,s=Array.isArray(t),n=s&&[]||{};return s?(e=e||[],n=n.concat(e),t.forEach(function(t,s){"undefined"==typeof n[s]?n[s]=t:i.isPlainObject(t)?n[s]=i.merge(e[s],t):-1===e.indexOf(t)&&n.push(t)}),n):(e&&i.isPlainObject(e)&&Object.keys(e).forEach(function(t){n[t]=e[t];
 }),Object.keys(t).forEach(function(s){t[s]&&i.isPlainObject(t[s])&&e[s]?n[s]=i.merge(e[s],t[s]):n[s]=t[s]}),n)},now:function(){return window.nwf?window.nwf.system.Performance.elapsedTime:window.performance.now()},empty:function(e){for(;e.lastChild;)e.removeChild(e.lastChild)},radixSort:function(e,t,i,s){if(t=t||0,i=i||e.length,s=s||31,!(t>=i-1||0>s)){for(var n=t,l=i,r=1<<s;l>n;)if(e[n]&r){--l;var h=e[n];e[n]=e[l],e[l]=h}else++n;this.radixSort(e,t,l,s-1),this.radixSort(e,l,i,s-1)}},randomizeRGB:function(e,t){var i,s,n=e.split(","),l="rgb(";for(t=this.randomInt(t),i=0;3>i;i++)s=parseInt(n[i])+t,0>s?s=0:s>255&&(s=255),l+=s+",";return l=l.substring(0,l.length-1),l+=")"},getJSON:function(e){var t=new XMLHttpRequest,i="undefined"==typeof e.cache?!1:e.cache,s=i?e.url:e.url+"?t="+Math.floor(1e4*Math.random())+Date.now();t.onreadystatechange=function(){if(200===this.status){var t=null;try{t=JSON.parse(this.responseText)}catch(i){return}return void e.callback.call(e.scope||null,t)}0!==this.status&&console.warn("[Tools.getJSON] Error: "+this.status+" ("+this.statusText+") :: "+e.url)},t.open("GET",s,!0),t.setRequestHeader("Accept","application/json"),t.setRequestHeader("Content-Type","application/json"),t.send("")}};
 
 
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 /**
  * Polyfill for the additional KeyboardEvent properties defined in the D3E and
  * D4E draft specifications, by @inexorabletash.
@@ -6550,7 +7143,7 @@ var vg=module.exports={VERSION:"0.1.1",PI:Math.PI,TAU:2*Math.PI,DEG_TO_RAD:.0174
 
 } (window));
 
-},{}],18:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 var EPS = 0.1;
 
 module.exports = {
@@ -6615,7 +7208,7 @@ module.exports = {
   }
 };
 
-},{}],19:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 /**
  * Gamepad controls for A-Frame.
  *
@@ -6864,7 +7457,7 @@ module.exports = {
   }
 };
 
-},{"../../lib/GamepadButton":11,"../../lib/GamepadButtonEvent":12}],20:[function(require,module,exports){
+},{"../../lib/GamepadButton":13,"../../lib/GamepadButtonEvent":14}],22:[function(require,module,exports){
 var radToDeg = THREE.Math.radToDeg,
     isMobile = AFRAME.utils.device.isMobile();
 
@@ -6947,7 +7540,7 @@ function isNullVector (vector) {
   return vector.x === 0 && vector.y === 0 && vector.z === 0;
 }
 
-},{}],21:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 var physics = require('aframe-physics-system');
 
 module.exports = {
@@ -6977,7 +7570,7 @@ module.exports = {
   }
 };
 
-},{"./checkpoint-controls":18,"./gamepad-controls":19,"./hmd-controls":20,"./keyboard-controls":22,"./mouse-controls":23,"./touch-controls":24,"./universal-controls":25,"aframe-physics-system":50}],22:[function(require,module,exports){
+},{"./checkpoint-controls":20,"./gamepad-controls":21,"./hmd-controls":22,"./keyboard-controls":24,"./mouse-controls":25,"./touch-controls":26,"./universal-controls":27,"aframe-physics-system":52}],24:[function(require,module,exports){
 require('../../lib/keyboard.polyfill');
 
 var MAX_DELTA = 0.2,
@@ -7132,7 +7725,7 @@ module.exports = {
 
 };
 
-},{"../../lib/keyboard.polyfill":17}],23:[function(require,module,exports){
+},{"../../lib/keyboard.polyfill":19}],25:[function(require,module,exports){
 document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
 
 /**
@@ -7282,7 +7875,7 @@ module.exports = {
   }
 };
 
-},{}],24:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 module.exports = {
   schema: {
     enabled: { default: true }
@@ -7352,7 +7945,7 @@ module.exports = {
   }
 };
 
-},{}],25:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 /**
  * Universal Controls
  *
@@ -7561,7 +8154,7 @@ module.exports = {
   }
 };
 
-},{}],26:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 var LoopMode = {
   once: THREE.LoopOnce,
   repeat: THREE.LoopRepeat,
@@ -7685,7 +8278,7 @@ function regExpEscape (s) {
   return s.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
 }
 
-},{}],27:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 THREE.FBXLoader = require('../../lib/FBXLoader');
 
 /**
@@ -7725,7 +8318,7 @@ module.exports = {
   }
 };
 
-},{"../../lib/FBXLoader":10}],28:[function(require,module,exports){
+},{"../../lib/FBXLoader":12}],30:[function(require,module,exports){
 var fetchScript = require('../../lib/fetch-script')();
 
 var LOADER_SRC = 'https://rawgit.com/mrdoob/three.js/dev/examples/js/loaders/GLTF2Loader.js';
@@ -7785,7 +8378,7 @@ var loadLoader = (function () {
   };
 }());
 
-},{"../../lib/fetch-script":15}],29:[function(require,module,exports){
+},{"../../lib/fetch-script":17}],31:[function(require,module,exports){
 module.exports = {
   'animation-mixer': require('./animation-mixer'),
   'fbx-model': require('./fbx-model'),
@@ -7842,7 +8435,7 @@ module.exports = {
   }
 };
 
-},{"./animation-mixer":26,"./fbx-model":27,"./gltf-model-next":28,"./json-model":30,"./object-model":31,"./ply-model":32,"./three-model":33}],30:[function(require,module,exports){
+},{"./animation-mixer":28,"./fbx-model":29,"./gltf-model-next":30,"./json-model":32,"./object-model":33,"./ply-model":34,"./three-model":35}],32:[function(require,module,exports){
 /**
  * json-model
  *
@@ -7902,7 +8495,7 @@ module.exports = {
   }
 };
 
-},{}],31:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /**
  * object-model
  *
@@ -7957,7 +8550,7 @@ module.exports = {
   }
 };
 
-},{}],32:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /**
  * ply-model
  *
@@ -8038,7 +8631,7 @@ function createModel (geometry) {
   }));
 }
 
-},{"../../lib/PLYLoader":13}],33:[function(require,module,exports){
+},{"../../lib/PLYLoader":15}],35:[function(require,module,exports){
 var DEFAULT_ANIMATION = '__auto__';
 
 /**
@@ -8185,7 +8778,7 @@ module.exports = {
   }
 };
 
-},{}],34:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 module.exports = {
   schema: {
     offset: {default: {x: 0, y: 0, z: 0}, type: 'vec3'}
@@ -8219,7 +8812,7 @@ module.exports = {
   }
 };
 
-},{}],35:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /**
  * Specifies an envMap on an entity, without replacing any existing material
  * properties.
@@ -8265,7 +8858,7 @@ module.exports = {
   }
 };
 
-},{}],36:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /**
  * Based on aframe/examples/showcase/tracked-controls.
  *
@@ -8337,7 +8930,7 @@ module.exports = {
   }
 };
 
-},{}],37:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 var physics = require('aframe-physics-system');
 
 module.exports = {
@@ -8367,7 +8960,7 @@ module.exports = {
   }
 };
 
-},{"./checkpoint":34,"./cube-env-map":35,"./grab":36,"./jump-ability":38,"./kinematic-body":39,"./sphere-collider":40,"./toggle-velocity":41,"aframe-physics-system":50}],38:[function(require,module,exports){
+},{"./checkpoint":36,"./cube-env-map":37,"./grab":38,"./jump-ability":40,"./kinematic-body":41,"./sphere-collider":42,"./toggle-velocity":43,"aframe-physics-system":52}],40:[function(require,module,exports){
 var ACCEL_G = -9.8, // m/s^2
     EASING = -15; // m/s^2
 
@@ -8431,7 +9024,7 @@ module.exports = {
   }
 };
 
-},{}],39:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /**
  * Kinematic body.
  *
@@ -8631,7 +9224,7 @@ module.exports = {
   }
 };
 
-},{}],40:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 /**
  * Based on aframe/examples/showcase/tracked-controls.
  *
@@ -8775,7 +9368,7 @@ module.exports = {
   }
 };
 
-},{}],41:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 /**
  * Toggle velocity.
  *
@@ -8812,7 +9405,7 @@ module.exports = {
   },
 };
 
-},{}],42:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /**
  * Flat grid.
  *
@@ -8848,7 +9441,7 @@ module.exports.registerAll = (function () {
   };
 }());
 
-},{}],43:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 var vg = require('../../lib/hex-grid.min.js');
 var defaultHexGrid = require('../../lib/default-hex-grid.json');
 
@@ -8913,7 +9506,7 @@ module.exports.registerAll = (function () {
   };
 }());
 
-},{"../../lib/default-hex-grid.json":14,"../../lib/hex-grid.min.js":16}],44:[function(require,module,exports){
+},{"../../lib/default-hex-grid.json":16,"../../lib/hex-grid.min.js":18}],46:[function(require,module,exports){
 /**
  * Flat-shaded ocean primitive.
  *
@@ -9020,7 +9613,7 @@ module.exports.registerAll = (function () {
   };
 }());
 
-},{}],45:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 /**
  * Tube following a custom path.
  *
@@ -9095,7 +9688,7 @@ module.exports.registerAll = (function () {
   };
 }());
 
-},{}],46:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 module.exports = {
   'a-grid':     require('./a-grid'),
   'a-hexgrid': require('./a-hexgrid'),
@@ -9113,9 +9706,9 @@ module.exports = {
   }
 };
 
-},{"./a-grid":42,"./a-hexgrid":43,"./a-ocean":44,"./a-tube":45}],47:[function(require,module,exports){
+},{"./a-grid":44,"./a-hexgrid":45,"./a-ocean":46,"./a-tube":47}],49:[function(require,module,exports){
 !function(modules){function __webpack_require__(moduleId){if(installedModules[moduleId])return installedModules[moduleId].exports;var module=installedModules[moduleId]={exports:{},id:moduleId,loaded:!1};return modules[moduleId].call(module.exports,module,module.exports,__webpack_require__),module.loaded=!0,module.exports}var installedModules={};return __webpack_require__.m=modules,__webpack_require__.c=installedModules,__webpack_require__.p="",__webpack_require__(0)}([function(module,exports,__webpack_require__){var vertexShader=__webpack_require__(2),fragmentShader=__webpack_require__(1);AFRAME.registerShader("gradient",{schema:{topColor:{type:"vec3",default:"255 0 0",is:"uniform"},bottomColor:{type:"vec3",default:"0 0 255",is:"uniform"},offset:{type:"float",default:"400",is:"uniform"},exponent:{type:"float",default:"0.6",is:"uniform"}},vertexShader:vertexShader,fragmentShader:fragmentShader}),AFRAME.registerPrimitive("a-gradient-sky",{defaultComponents:{geometry:{primitive:"sphere",radius:5e3,segmentsWidth:64,segmentsHeight:20},material:{shader:"gradient"},scale:"-1 1 1"},mappings:{topColor:"material.topColor",bottomColor:"material.bottomColor",offset:"material.offset",exponent:"material.exponent"}})},function(module,exports){module.exports="uniform vec3 bottomColor;\nuniform vec3 topColor;\nuniform float offset;\nuniform float exponent;\nvarying vec3 vWorldPosition;\n\nvoid main() {\n    float h = normalize( vWorldPosition + offset ).y;\n    float rB = bottomColor.x/255.0;\n    float gB = bottomColor.y/255.0;\n    float bB = bottomColor.z/255.0;\n    vec3 bColor = vec3(rB,gB,bB);\n    float rT = topColor.x/255.0;\n    float gT = topColor.y/255.0;\n    float bT = topColor.z/255.0;\n    vec3 tColor = vec3(rT,gT,bT);\n    gl_FragColor = vec4( mix( bColor, tColor, max( pow( max( h, 0.0 ), exponent ), 0.0 ) ), 1.0 );\n}"},function(module,exports){module.exports="varying vec3 vWorldPosition;\n\nvoid main() {\n\tvec4 worldPosition = modelMatrix * vec4( position, 1.0 );\n\tvWorldPosition = worldPosition.xyz;\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n}"}]);
-},{}],48:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 /**
  * Particles component for A-Frame.
  *
@@ -9400,7 +9993,7 @@ AFRAME.registerComponent('particle-system', {
     }
 });
 
-},{"./lib/SPE.js":49}],49:[function(require,module,exports){
+},{"./lib/SPE.js":51}],51:[function(require,module,exports){
 /* shader-particle-engine 1.0.5
  * 
  * (c) 2015 Luke Moody (http://www.github.com/squarefeet)
@@ -12925,7 +13518,7 @@ SPE.Emitter.prototype.remove = function() {
 
     return this;
 };
-},{}],50:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 var CANNON = require('cannon'),
     math = require('./src/components/math');
 
@@ -12953,7 +13546,7 @@ module.exports = {
 // Export CANNON.js.
 window.CANNON = window.CANNON || CANNON;
 
-},{"./src/components/body/dynamic-body":53,"./src/components/body/static-body":54,"./src/components/constraint":55,"./src/components/math":56,"./src/system/physics":60,"cannon":78}],51:[function(require,module,exports){
+},{"./src/components/body/dynamic-body":55,"./src/components/body/static-body":56,"./src/components/constraint":57,"./src/components/math":58,"./src/system/physics":62,"cannon":79}],53:[function(require,module,exports){
 /**
  * CANNON.shape2mesh
  *
@@ -13113,7 +13706,7 @@ CANNON.shape2mesh = function(body){
 
 module.exports = CANNON.shape2mesh;
 
-},{"cannon":78}],52:[function(require,module,exports){
+},{"cannon":79}],54:[function(require,module,exports){
 var CANNON = require('cannon'),
     mesh2shape = require('three-to-cannon');
 
@@ -13369,7 +13962,7 @@ module.exports = {
   }())
 };
 
-},{"../../../lib/CANNON-shape2mesh":51,"cannon":78,"three-to-cannon":138}],53:[function(require,module,exports){
+},{"../../../lib/CANNON-shape2mesh":53,"cannon":79,"three-to-cannon":139}],55:[function(require,module,exports){
 var Body = require('./body');
 
 /**
@@ -13391,7 +13984,7 @@ module.exports = AFRAME.utils.extend({}, Body, {
   }
 });
 
-},{"./body":52}],54:[function(require,module,exports){
+},{"./body":54}],56:[function(require,module,exports){
 var Body = require('./body');
 
 /**
@@ -13406,7 +13999,7 @@ module.exports = AFRAME.utils.extend({}, Body, {
   }
 });
 
-},{"./body":52}],55:[function(require,module,exports){
+},{"./body":54}],57:[function(require,module,exports){
 var CANNON = require('cannon');
 
 module.exports = {
@@ -13528,7 +14121,7 @@ module.exports = {
   }
 };
 
-},{"cannon":78}],56:[function(require,module,exports){
+},{"cannon":79}],58:[function(require,module,exports){
 module.exports = {
   'velocity':   require('./velocity'),
   'quaternion': require('./quaternion'),
@@ -13545,7 +14138,7 @@ module.exports = {
   }
 };
 
-},{"./quaternion":57,"./velocity":58}],57:[function(require,module,exports){
+},{"./quaternion":59,"./velocity":60}],59:[function(require,module,exports){
 /**
  * Quaternion.
  *
@@ -13574,7 +14167,7 @@ module.exports = {
   }
 };
 
-},{}],58:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 /**
  * Velocity, in m/s.
  */
@@ -13620,7 +14213,7 @@ module.exports = {
   }
 };
 
-},{}],59:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 module.exports = {
   GRAVITY: -9.8,
   MAX_INTERVAL: 4 / 60,
@@ -13635,7 +14228,7 @@ module.exports = {
   }
 };
 
-},{}],60:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 var CANNON = require('cannon'),
     CONSTANTS = require('../constants'),
     C_GRAV = CONSTANTS.GRAVITY,
@@ -13794,355 +14387,7 @@ module.exports = {
   }
 };
 
-},{"../constants":59,"cannon":78}],61:[function(require,module,exports){
-/* global AFRAME */
-
-if (typeof AFRAME === 'undefined') {
-    throw new Error('Component attempted to register before AFRAME was available.');
-}
-
-// First, checks if it isn't implemented yet.
-if (!String.prototype.format) {
-    String.prototype.format = function() {
-        var args = arguments;
-        return this.replace(/{(\d+)}/g, function(match, number) {
-            return typeof args[number] != 'undefined'
-                ? args[number]
-                : match
-                ;
-        });
-    };
-}
-
-/**
- * Visual preloader system for A-Frame.
- *
- * When applied to the <scene> will automatically display a preloader modal that reflects the current loading progress
- * of resources in <a-assets> that have been flagged for preloading and will auto-close the modal when it reaches 100%.
- * Alternately, the modal can be manually closed
- *
- * Emits a 'preloading-complete' event when done.
- */
-AFRAME.registerSystem('preloader', {
-    schema: {
-        type: { type: 'string', default: 'bootstrap' }, //type of CSS framework to use - acceptable values are: 'bootstrap' or 'custom'
-        id: {type: 'string', default: 'preloader-modal'}, //ID of the auto injected preloader modal
-        autoInject: { type: 'boolean', default: true }, //whether or not to auto-inject the preloader html into the page
-        target: { type: 'selector', default: '#preloader-modal'}, //the html target selector
-        progressValueAttr:  { type: 'string', default: 'aria-valuenow' },//an attribute of the progress bar to set when progress is updated
-        barProgressStyle: { type: 'string', default: 'width'}, //target css style to set as a percentage on the bar
-        bar: { type: 'selector', default: '#preloader-modal .progress-bar'}, //html class of progress bar in preloader - used to set the width
-        label: { type: 'selector', default: '#preloader-modal .progress-label'}, //html class of label in preloader - used to set the percentage
-        labelText: { type: 'string', default: '{0}% Complete'}, //loading text format {0} will be replaced with the percent progress e.g. 30%
-        autoClose: { type: 'boolean', default: true}, //automatically close preloader by default - not supported if clickToClose is set to 'true'
-        clickToClose: { type: 'boolean', default: false}, //whether the user must click a button to close the modal when preloading is finished
-        closeLabelText: { type: 'string', default: 'Continue'}, //default label text of click to close button
-        title: { type: 'string', default: ''}, //title of preloader modal
-        debug: { type: 'boolean', default: false}, //whether or not to enable logging to console
-        disableVRModeUI: { type: 'boolean', default: true}, //whether or not to disable VR Mode UI when preloading
-        slowLoad: { type: 'boolean', default: false}, //deliberately slow down the load progress by adding 2 second delays before updating progress - used to showcase loader on fast connections and should not be enabled in production
-        doneLabelText: { type: 'string', default: 'Done'} //text to set on label when loading is complete
-    },
-
-    /**
-     * Set if component needs multiple instancing.
-     */
-    multiple: false,
-
-    loadedAssetCount: 0, //total number of assets loaded
-    totalAssetCount: 0, //total number of assets to load
-    slowLoadTimeAssetUpdate: 1000, //length of time to slow down asset load progress if slowLoad is set to 'true'
-    slowLoadTimePreloadFinish: 4000, //length of time to slow down preload finish if slowLoad is set to 'true'
-
-    /**
-     * Called once when component is attached. Generally for initial setup.
-     */
-    init: function () {
-
-        if(this.data.debug){
-            console.log('Initialized preloader');
-        }
-
-        if(this.data.type === 'bootstrap' && typeof $ === 'undefined'){
-            console.error('jQuery is not present, cannot instantiate Bootstrap modal for preloader!');
-        }
-
-        document.querySelector('a-assets').addEventListener('loaded',function(){
-            if(this.data.debug){
-                console.info('All assets loaded');
-            }
-            this.triggerProgressComplete();
-
-        }.bind(this));
-
-        var assetItems = document.querySelectorAll('a-assets a-asset-item,a-assets img,a-assets audio,a-assets video');
-
-        this.totalAssetCount = assetItems.length;
-
-        this.watchPreloadProgress(assetItems);
-
-        if(!this.data.target && this.data.autoInject){
-            if(this.data.debug){
-                console.info('No preloader html found, auto-injecting');
-            }
-            this.injectHTML();
-        }else{
-            switch(this.data.type){
-                case 'bootstrap':
-                    this.initBootstrapModal($(this.data.target));
-                    break;
-                default:
-                    //do nothing
-                    break;
-            }
-        }
-
-        if(this.data.disableVRModeUI){
-            this.el.setAttribute('vr-mode-ui','enabled','false');
-        }
-    },
-
-    /**
-     * Called when component is attached and when component data changes.
-     * Generally modifies the entity based on the data.
-     */
-    update: function (oldData) { },
-
-    /**
-     *
-     * @param assetItems A NodeList with a list of <a-asset-item> elements that you wish to watch
-     */
-    watchPreloadProgress: function(assetItems){
-        for (var a = 0; a < assetItems.length; a++) {
-
-            var eventName;
-
-            switch(assetItems[a].nodeName){
-                case 'A-ASSET-ITEM':
-                    eventName = 'loaded';
-                    break;
-                case 'img':
-                    eventName = 'load';
-                    break;
-                case 'audio':
-                case 'video':
-                    eventName = 'loadeddata';
-                    break;
-            }
-
-            assetItems[a].addEventListener(eventName,function(e){
-                this.loadedAssetCount++;
-                if(this.data.debug) {
-                    console.info('Loaded ' + this.loadedAssetCount + '/' + this.totalAssetCount + ' asset items');
-                }
-                this.onAssetLoaded();
-            }.bind(this));
-        }
-    },
-
-    onAssetLoaded: function(){
-        if(this.loadedAssetCount === this.totalAssetCount){
-            this.triggerProgressComplete();
-        }else{
-            var percentage = Math.floor(this.loadedAssetCount/this.totalAssetCount*100);
-            if(this.data.slowLoad) {
-                setTimeout(function () {
-                    this.drawProgress(percentage);
-                }.bind(this), this.slowLoadTimeAssetUpdate)
-            }else{
-                this.drawProgress(percentage);
-            }
-        }
-    },
-
-    triggerProgressComplete: function(){
-
-        if(this.data.slowLoad){
-            setTimeout(function(){
-                if(this.data.type === 'bootstrap') $(this.data.bar).addClass('progress-bar-success');
-                this.drawProgress(100);
-                this.data.target.classList.add('preloader-modal__complete');
-            }.bind(this),this.slowLoadTimePreloadFinish-1000);
-        }else{
-            if(this.data.type === 'bootstrap') $(this.data.bar).addClass('progress-bar-success');
-            this.drawProgress(100);
-            this.data.target.classList.add('preloader-modal__complete');
-        }
-
-        if(this.data.autoClose && !this.data.clickToClose){
-            if(this.data.slowLoad){
-                setTimeout(function(){
-                    this.triggerPreloadingComplete();
-                    this.closeModal();
-                }.bind(this),this.slowLoadTimePreloadFinish)
-            }else{
-                this.triggerPreloadingComplete();
-                this.closeModal();
-            }
-
-        }else{
-            if(this.closeBtn && this.data.clickToClose){
-                if(this.data.slowLoad){
-                    setTimeout(function(){
-                        this.closeBtn.setAttribute('style','display: inline-block');
-                    }.bind(this),this.slowLoadTimePreloadFinish)
-                }else{
-                    this.closeBtn.setAttribute('style','display: inline-block');
-                }
-
-            }
-        }
-    },
-
-    drawProgress: function(percentage){
-        //update loading bar if exists
-        if(this.data.label){
-            this.data.label.innerHTML = (percentage === 100) ? this.data.doneLabelText : this.data.labelText.format(percentage);
-        }
-
-        if(this.data.bar){
-            this.data.bar.setAttribute(this.data.progressValueAttr,percentage);
-            this.data.bar.setAttribute('style',this.data.barProgressStyle+':'+percentage+'%');
-        }
-    },
-
-    injectHTML: function(){
-        switch(this.data.type){
-            case 'bootstrap':
-                this.injectBootstrapModal();
-                break;
-            default:
-                //do nothing
-                break;
-        }
-    },
-
-    injectBootstrapModal: function(){
-
-        if(this.data.debug){
-            console.info('Injecting bootstrap modal');
-        }
-
-        if(!this.data.title){
-            //full screen modal
-            var $modal = $('' +
-                '<div id="'+this.data.id+'" class="modal instructions-modal" tabindex="-1" role="dialog">'+
-                '<div class="modal-dialog modal-dialog__full" role="document">'+
-                '<div class="modal-content vertical-align text-center">'+
-                '<div class="col-xs-10 col-xs-offset-1 col-md-6 col-md-offset-3">'+
-                '<div class="progress">'+
-                '<div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">'+
-                '<span class="progress-label">Loading 0% Complete</span>'+
-                '</div>'+
-                '</div>'+
-                ((this.data.clickToClose) ? '<button type="button" class="close-btn btn btn-default" data-dismiss="modal">Continue</button>' : '' )+
-                '</div>'+
-                '</div>'+
-                '</div>'+
-                '</div>'+
-                '');
-        }else{
-            //regular modal
-            var $modal = $('' +
-                '<div id="'+this.data.id+'" class="modal instructions-modal" tabindex="-1" role="dialog">'+
-                '<div class="modal-dialog modal-dialog__full" role="document">'+
-                '<div class="modal-content">'+
-                '<div class="modal-header">'+
-                '<h4 class="modal-title">'+this.data.title+'</h4>'+
-                '</div>'+
-                '<div class="modal-body">' +
-                '<div class="col-xs-10 col-xs-offset-1 col-md-6 col-md-offset-3">'+
-                '<div class="progress">'+
-                '<div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">'+
-                '<span class="progress-label">Loading 0% Complete</span>'+
-                '</div>'+
-                '</div>'+
-                '</div>'+
-                '</div>'+
-                '<div class="modal-footer">'+
-                ((this.data.clickToClose) ? '<button type="button" class="close-btn btn btn-default" data-dismiss="modal">Continue</button>' : '' )+
-                '</div>'+
-                '</div>'+
-                '</div>'+
-                '</div>'+
-                '');
-        }
-
-        $('body').append($modal);
-
-        this.data.target = $modal[0];
-        this.data.label = $modal.find('.progress-label')[0];
-        this.data.bar = $modal.find('.progress-bar')[0];
-
-        this.initBootstrapModal($modal);
-    },
-
-    initBootstrapModal: function($modal){
-        $modal.modal({
-            backdrop: 'static',
-            keyboard: false
-        });
-
-        if(!this.data.title){
-            var $modalStyle = $('<style>' +
-                '.vertical-align {'+
-                'display: flex;'+
-                'align-items: center;'+
-                '}'+
-                '.modal-dialog__full {'+
-                'width: 100%;'+
-                'height: 100%;'+
-                'margin: 0;'+
-                'padding: 0;'+
-                '}'+
-                '.modal-dialog__full .modal-content {'+
-                'height: auto;'+
-                'min-height: 100%;'+
-                'border-radius: 0;'+
-                '}' +
-                '</style>');
-            $('head').append($modalStyle);
-        }
-
-        if(this.data.clickToClose){
-            var $closeBtn = $modal.find('[data-dismiss=modal]');
-
-            if($closeBtn.length > 0){
-                this.closeBtn = $closeBtn[0];
-
-                this.closeBtn.setAttribute('style','display: none');
-
-                $modal.on('hidden.bs.modal', function (e) {
-                    this.triggerPreloadingComplete();
-                }.bind(this))
-            }else{
-                console.error('No Bootstrap modal close button is set in the HTML. Please add a button with the data-dismiss="modal" attribute to use clickToClose.');
-            }
-        }
-    },
-
-    triggerPreloadingComplete: function(){
-        if(this.data.debug){
-            console.info('Preloading complete');
-        }
-        if(this.data.disableVRModeUI){
-            this.el.setAttribute('vr-mode-ui','enabled','true');
-        }
-        this.el.emit('preloading-complete');
-    },
-
-    closeModal: function(){
-        switch(this.data.type){
-            case 'bootstrap':
-                $(this.data.target).modal('hide');
-                break;
-            default:
-                //do nothing
-                break;
-        }
-    }
-});
-},{}],62:[function(require,module,exports){
+},{"../constants":61,"cannon":79}],63:[function(require,module,exports){
 if (typeof AFRAME === 'undefined') {
   throw new Error('Component attempted to register before AFRAME was available.');
 }
@@ -14257,7 +14502,7 @@ AFRAME.registerComponent('random-scale', {
   }
 });
 
-},{}],63:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 (function (global){
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.AFRAME = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 var str = Object.prototype.toString
@@ -95026,7 +95271,7 @@ module.exports = getWakeLock();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 // This file is autogenerated via the `commonjs` Grunt task. You can require() this file in a CommonJS environment.
 require('../../js/transition.js')
 require('../../js/alert.js')
@@ -95040,7 +95285,7 @@ require('../../js/popover.js')
 require('../../js/scrollspy.js')
 require('../../js/tab.js')
 require('../../js/affix.js')
-},{"../../js/affix.js":65,"../../js/alert.js":66,"../../js/button.js":67,"../../js/carousel.js":68,"../../js/collapse.js":69,"../../js/dropdown.js":70,"../../js/modal.js":71,"../../js/popover.js":72,"../../js/scrollspy.js":73,"../../js/tab.js":74,"../../js/tooltip.js":75,"../../js/transition.js":76}],65:[function(require,module,exports){
+},{"../../js/affix.js":66,"../../js/alert.js":67,"../../js/button.js":68,"../../js/carousel.js":69,"../../js/collapse.js":70,"../../js/dropdown.js":71,"../../js/modal.js":72,"../../js/popover.js":73,"../../js/scrollspy.js":74,"../../js/tab.js":75,"../../js/tooltip.js":76,"../../js/transition.js":77}],66:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: affix.js v3.3.7
  * http://getbootstrap.com/javascript/#affix
@@ -95204,7 +95449,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],66:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: alert.js v3.3.7
  * http://getbootstrap.com/javascript/#alerts
@@ -95300,7 +95545,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: button.js v3.3.7
  * http://getbootstrap.com/javascript/#buttons
@@ -95427,7 +95672,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],68:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: carousel.js v3.3.7
  * http://getbootstrap.com/javascript/#carousel
@@ -95666,7 +95911,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],69:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: collapse.js v3.3.7
  * http://getbootstrap.com/javascript/#collapse
@@ -95880,7 +96125,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],70:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: dropdown.js v3.3.7
  * http://getbootstrap.com/javascript/#dropdowns
@@ -96047,7 +96292,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],71:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: modal.js v3.3.7
  * http://getbootstrap.com/javascript/#modals
@@ -96388,7 +96633,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: popover.js v3.3.7
  * http://getbootstrap.com/javascript/#popovers
@@ -96498,7 +96743,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],73:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: scrollspy.js v3.3.7
  * http://getbootstrap.com/javascript/#scrollspy
@@ -96672,7 +96917,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: tab.js v3.3.7
  * http://getbootstrap.com/javascript/#tabs
@@ -96829,7 +97074,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],75:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: tooltip.js v3.3.7
  * http://getbootstrap.com/javascript/#tooltip
@@ -97351,7 +97596,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],76:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 /* ========================================================================
  * Bootstrap: transition.js v3.3.7
  * http://getbootstrap.com/javascript/#transitions
@@ -97412,7 +97657,7 @@ require('../../js/affix.js')
 
 }(jQuery);
 
-},{}],77:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
 module.exports={
   "_args": [
     [
@@ -97520,7 +97765,7 @@ module.exports={
   "version": "0.6.2"
 }
 
-},{}],78:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 // Export classes
 module.exports = {
     version :                       require('../package.json').version,
@@ -97575,7 +97820,7 @@ module.exports = {
     World :                         require('./world/World'),
 };
 
-},{"../package.json":77,"./collision/AABB":79,"./collision/ArrayCollisionMatrix":80,"./collision/Broadphase":81,"./collision/GridBroadphase":82,"./collision/NaiveBroadphase":83,"./collision/ObjectCollisionMatrix":84,"./collision/Ray":86,"./collision/RaycastResult":87,"./collision/SAPBroadphase":88,"./constraints/ConeTwistConstraint":89,"./constraints/Constraint":90,"./constraints/DistanceConstraint":91,"./constraints/HingeConstraint":92,"./constraints/LockConstraint":93,"./constraints/PointToPointConstraint":94,"./equations/ContactEquation":96,"./equations/Equation":97,"./equations/FrictionEquation":98,"./equations/RotationalEquation":99,"./equations/RotationalMotorEquation":100,"./material/ContactMaterial":101,"./material/Material":102,"./math/Mat3":104,"./math/Quaternion":105,"./math/Transform":106,"./math/Vec3":107,"./objects/Body":108,"./objects/RaycastVehicle":109,"./objects/RigidVehicle":110,"./objects/SPHSystem":111,"./objects/Spring":112,"./shapes/Box":114,"./shapes/ConvexPolyhedron":115,"./shapes/Cylinder":116,"./shapes/Heightfield":117,"./shapes/Particle":118,"./shapes/Plane":119,"./shapes/Shape":120,"./shapes/Sphere":121,"./shapes/Trimesh":122,"./solver/GSSolver":123,"./solver/Solver":124,"./solver/SplitSolver":125,"./utils/EventTarget":126,"./utils/Pool":128,"./utils/Vec3Pool":131,"./world/Narrowphase":132,"./world/World":133}],79:[function(require,module,exports){
+},{"../package.json":78,"./collision/AABB":80,"./collision/ArrayCollisionMatrix":81,"./collision/Broadphase":82,"./collision/GridBroadphase":83,"./collision/NaiveBroadphase":84,"./collision/ObjectCollisionMatrix":85,"./collision/Ray":87,"./collision/RaycastResult":88,"./collision/SAPBroadphase":89,"./constraints/ConeTwistConstraint":90,"./constraints/Constraint":91,"./constraints/DistanceConstraint":92,"./constraints/HingeConstraint":93,"./constraints/LockConstraint":94,"./constraints/PointToPointConstraint":95,"./equations/ContactEquation":97,"./equations/Equation":98,"./equations/FrictionEquation":99,"./equations/RotationalEquation":100,"./equations/RotationalMotorEquation":101,"./material/ContactMaterial":102,"./material/Material":103,"./math/Mat3":105,"./math/Quaternion":106,"./math/Transform":107,"./math/Vec3":108,"./objects/Body":109,"./objects/RaycastVehicle":110,"./objects/RigidVehicle":111,"./objects/SPHSystem":112,"./objects/Spring":113,"./shapes/Box":115,"./shapes/ConvexPolyhedron":116,"./shapes/Cylinder":117,"./shapes/Heightfield":118,"./shapes/Particle":119,"./shapes/Plane":120,"./shapes/Shape":121,"./shapes/Sphere":122,"./shapes/Trimesh":123,"./solver/GSSolver":124,"./solver/Solver":125,"./solver/SplitSolver":126,"./utils/EventTarget":127,"./utils/Pool":129,"./utils/Vec3Pool":132,"./world/Narrowphase":133,"./world/World":134}],80:[function(require,module,exports){
 var Vec3 = require('../math/Vec3');
 var Utils = require('../utils/Utils');
 
@@ -97898,7 +98143,7 @@ AABB.prototype.overlapsRay = function(ray){
 
     return true;
 };
-},{"../math/Vec3":107,"../utils/Utils":130}],80:[function(require,module,exports){
+},{"../math/Vec3":108,"../utils/Utils":131}],81:[function(require,module,exports){
 module.exports = ArrayCollisionMatrix;
 
 /**
@@ -97971,7 +98216,7 @@ ArrayCollisionMatrix.prototype.setNumObjects = function(n) {
     this.matrix.length = n*(n-1)>>1;
 };
 
-},{}],81:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 var Body = require('../objects/Body');
 var Vec3 = require('../math/Vec3');
 var Quaternion = require('../math/Quaternion');
@@ -98179,7 +98424,7 @@ Broadphase.prototype.aabbQuery = function(world, aabb, result){
     console.warn('.aabbQuery is not implemented in this Broadphase subclass.');
     return [];
 };
-},{"../math/Quaternion":105,"../math/Vec3":107,"../objects/Body":108,"../shapes/Plane":119,"../shapes/Shape":120}],82:[function(require,module,exports){
+},{"../math/Quaternion":106,"../math/Vec3":108,"../objects/Body":109,"../shapes/Plane":120,"../shapes/Shape":121}],83:[function(require,module,exports){
 module.exports = GridBroadphase;
 
 var Broadphase = require('./Broadphase');
@@ -98409,7 +98654,7 @@ GridBroadphase.prototype.collisionPairs = function(world,pairs1,pairs2){
     this.makePairsUnique(pairs1,pairs2);
 };
 
-},{"../math/Vec3":107,"../shapes/Shape":120,"./Broadphase":81}],83:[function(require,module,exports){
+},{"../math/Vec3":108,"../shapes/Shape":121,"./Broadphase":82}],84:[function(require,module,exports){
 module.exports = NaiveBroadphase;
 
 var Broadphase = require('./Broadphase');
@@ -98484,7 +98729,7 @@ NaiveBroadphase.prototype.aabbQuery = function(world, aabb, result){
 
     return result;
 };
-},{"./AABB":79,"./Broadphase":81}],84:[function(require,module,exports){
+},{"./AABB":80,"./Broadphase":82}],85:[function(require,module,exports){
 module.exports = ObjectCollisionMatrix;
 
 /**
@@ -98557,7 +98802,7 @@ ObjectCollisionMatrix.prototype.reset = function() {
 ObjectCollisionMatrix.prototype.setNumObjects = function(n) {
 };
 
-},{}],85:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 module.exports = OverlapKeeper;
 
 /**
@@ -98653,7 +98898,7 @@ OverlapKeeper.prototype.getDiff = function(additions, removals) {
         }
     }
 };
-},{}],86:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 module.exports = Ray;
 
 var Vec3 = require('../math/Vec3');
@@ -99479,7 +99724,7 @@ function distanceFromIntersection(from, direction, position) {
 }
 
 
-},{"../collision/AABB":79,"../collision/RaycastResult":87,"../math/Quaternion":105,"../math/Transform":106,"../math/Vec3":107,"../shapes/Box":114,"../shapes/ConvexPolyhedron":115,"../shapes/Shape":120}],87:[function(require,module,exports){
+},{"../collision/AABB":80,"../collision/RaycastResult":88,"../math/Quaternion":106,"../math/Transform":107,"../math/Vec3":108,"../shapes/Box":115,"../shapes/ConvexPolyhedron":116,"../shapes/Shape":121}],88:[function(require,module,exports){
 var Vec3 = require('../math/Vec3');
 
 module.exports = RaycastResult;
@@ -99602,7 +99847,7 @@ RaycastResult.prototype.set = function(
 	this.body = body;
 	this.distance = distance;
 };
-},{"../math/Vec3":107}],88:[function(require,module,exports){
+},{"../math/Vec3":108}],89:[function(require,module,exports){
 var Shape = require('../shapes/Shape');
 var Broadphase = require('../collision/Broadphase');
 
@@ -99926,7 +100171,7 @@ SAPBroadphase.prototype.aabbQuery = function(world, aabb, result){
 
     return result;
 };
-},{"../collision/Broadphase":81,"../shapes/Shape":120}],89:[function(require,module,exports){
+},{"../collision/Broadphase":82,"../shapes/Shape":121}],90:[function(require,module,exports){
 module.exports = ConeTwistConstraint;
 
 var Constraint = require('./Constraint');
@@ -100017,7 +100262,7 @@ ConeTwistConstraint.prototype.update = function(){
 };
 
 
-},{"../equations/ConeEquation":95,"../equations/ContactEquation":96,"../equations/RotationalEquation":99,"../math/Vec3":107,"./Constraint":90,"./PointToPointConstraint":94}],90:[function(require,module,exports){
+},{"../equations/ConeEquation":96,"../equations/ContactEquation":97,"../equations/RotationalEquation":100,"../math/Vec3":108,"./Constraint":91,"./PointToPointConstraint":95}],91:[function(require,module,exports){
 module.exports = Constraint;
 
 var Utils = require('../utils/Utils');
@@ -100110,7 +100355,7 @@ Constraint.prototype.disable = function(){
 
 Constraint.idCounter = 0;
 
-},{"../utils/Utils":130}],91:[function(require,module,exports){
+},{"../utils/Utils":131}],92:[function(require,module,exports){
 module.exports = DistanceConstraint;
 
 var Constraint = require('./Constraint');
@@ -100167,7 +100412,7 @@ DistanceConstraint.prototype.update = function(){
     normal.mult(halfDist, eq.ri);
     normal.mult(-halfDist, eq.rj);
 };
-},{"../equations/ContactEquation":96,"./Constraint":90}],92:[function(require,module,exports){
+},{"../equations/ContactEquation":97,"./Constraint":91}],93:[function(require,module,exports){
 module.exports = HingeConstraint;
 
 var Constraint = require('./Constraint');
@@ -100303,7 +100548,7 @@ HingeConstraint.prototype.update = function(){
 };
 
 
-},{"../equations/ContactEquation":96,"../equations/RotationalEquation":99,"../equations/RotationalMotorEquation":100,"../math/Vec3":107,"./Constraint":90,"./PointToPointConstraint":94}],93:[function(require,module,exports){
+},{"../equations/ContactEquation":97,"../equations/RotationalEquation":100,"../equations/RotationalMotorEquation":101,"../math/Vec3":108,"./Constraint":91,"./PointToPointConstraint":95}],94:[function(require,module,exports){
 module.exports = LockConstraint;
 
 var Constraint = require('./Constraint');
@@ -100397,7 +100642,7 @@ LockConstraint.prototype.update = function(){
 };
 
 
-},{"../equations/ContactEquation":96,"../equations/RotationalEquation":99,"../equations/RotationalMotorEquation":100,"../math/Vec3":107,"./Constraint":90,"./PointToPointConstraint":94}],94:[function(require,module,exports){
+},{"../equations/ContactEquation":97,"../equations/RotationalEquation":100,"../equations/RotationalMotorEquation":101,"../math/Vec3":108,"./Constraint":91,"./PointToPointConstraint":95}],95:[function(require,module,exports){
 module.exports = PointToPointConstraint;
 
 var Constraint = require('./Constraint');
@@ -100490,7 +100735,7 @@ PointToPointConstraint.prototype.update = function(){
     z.ri.copy(x.ri);
     z.rj.copy(x.rj);
 };
-},{"../equations/ContactEquation":96,"../math/Vec3":107,"./Constraint":90}],95:[function(require,module,exports){
+},{"../equations/ContactEquation":97,"../math/Vec3":108,"./Constraint":91}],96:[function(require,module,exports){
 module.exports = ConeEquation;
 
 var Vec3 = require('../math/Vec3');
@@ -100569,7 +100814,7 @@ ConeEquation.prototype.computeB = function(h){
 };
 
 
-},{"../math/Mat3":104,"../math/Vec3":107,"./Equation":97}],96:[function(require,module,exports){
+},{"../math/Mat3":105,"../math/Vec3":108,"./Equation":98}],97:[function(require,module,exports){
 module.exports = ContactEquation;
 
 var Equation = require('./Equation');
@@ -100706,7 +100951,7 @@ ContactEquation.prototype.getImpactVelocityAlongNormal = function(){
 };
 
 
-},{"../math/Mat3":104,"../math/Vec3":107,"./Equation":97}],97:[function(require,module,exports){
+},{"../math/Mat3":105,"../math/Vec3":108,"./Equation":98}],98:[function(require,module,exports){
 module.exports = Equation;
 
 var JacobianElement = require('../math/JacobianElement'),
@@ -100970,7 +101215,7 @@ Equation.prototype.computeC = function(){
     return this.computeGiMGt() + this.eps;
 };
 
-},{"../math/JacobianElement":103,"../math/Vec3":107}],98:[function(require,module,exports){
+},{"../math/JacobianElement":104,"../math/Vec3":108}],99:[function(require,module,exports){
 module.exports = FrictionEquation;
 
 var Equation = require('./Equation');
@@ -101031,7 +101276,7 @@ FrictionEquation.prototype.computeB = function(h){
     return B;
 };
 
-},{"../math/Mat3":104,"../math/Vec3":107,"./Equation":97}],99:[function(require,module,exports){
+},{"../math/Mat3":105,"../math/Vec3":108,"./Equation":98}],100:[function(require,module,exports){
 module.exports = RotationalEquation;
 
 var Vec3 = require('../math/Vec3');
@@ -101102,7 +101347,7 @@ RotationalEquation.prototype.computeB = function(h){
 };
 
 
-},{"../math/Mat3":104,"../math/Vec3":107,"./Equation":97}],100:[function(require,module,exports){
+},{"../math/Mat3":105,"../math/Vec3":108,"./Equation":98}],101:[function(require,module,exports){
 module.exports = RotationalMotorEquation;
 
 var Vec3 = require('../math/Vec3');
@@ -101174,7 +101419,7 @@ RotationalMotorEquation.prototype.computeB = function(h){
     return B;
 };
 
-},{"../math/Mat3":104,"../math/Vec3":107,"./Equation":97}],101:[function(require,module,exports){
+},{"../math/Mat3":105,"../math/Vec3":108,"./Equation":98}],102:[function(require,module,exports){
 var Utils = require('../utils/Utils');
 
 module.exports = ContactMaterial;
@@ -101255,7 +101500,7 @@ function ContactMaterial(m1, m2, options){
 
 ContactMaterial.idCounter = 0;
 
-},{"../utils/Utils":130}],102:[function(require,module,exports){
+},{"../utils/Utils":131}],103:[function(require,module,exports){
 module.exports = Material;
 
 /**
@@ -101305,7 +101550,7 @@ function Material(options){
 
 Material.idCounter = 0;
 
-},{}],103:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 module.exports = JacobianElement;
 
 var Vec3 = require('./Vec3');
@@ -101349,7 +101594,7 @@ JacobianElement.prototype.multiplyVectors = function(spatial,rotational){
     return spatial.dot(this.spatial) + rotational.dot(this.rotational);
 };
 
-},{"./Vec3":107}],104:[function(require,module,exports){
+},{"./Vec3":108}],105:[function(require,module,exports){
 module.exports = Mat3;
 
 var Vec3 = require('./Vec3');
@@ -101773,7 +102018,7 @@ Mat3.prototype.transpose = function( target ) {
     return target;
 };
 
-},{"./Vec3":107}],105:[function(require,module,exports){
+},{"./Vec3":108}],106:[function(require,module,exports){
 module.exports = Quaternion;
 
 var Vec3 = require('./Vec3');
@@ -102263,7 +102508,7 @@ Quaternion.prototype.integrate = function(angularVelocity, dt, angularFactor, ta
 
     return target;
 };
-},{"./Vec3":107}],106:[function(require,module,exports){
+},{"./Vec3":108}],107:[function(require,module,exports){
 var Vec3 = require('./Vec3');
 var Quaternion = require('./Quaternion');
 
@@ -102368,7 +102613,7 @@ Transform.vectorToLocalFrame = function(position, quaternion, worldVector, resul
     return result;
 };
 
-},{"./Quaternion":105,"./Vec3":107}],107:[function(require,module,exports){
+},{"./Quaternion":106,"./Vec3":108}],108:[function(require,module,exports){
 module.exports = Vec3;
 
 var Mat3 = require('./Mat3');
@@ -102852,7 +103097,7 @@ Vec3.prototype.isAntiparallelTo = function(v,precision){
 Vec3.prototype.clone = function(){
     return new Vec3(this.x, this.y, this.z);
 };
-},{"./Mat3":104}],108:[function(require,module,exports){
+},{"./Mat3":105}],109:[function(require,module,exports){
 module.exports = Body;
 
 var EventTarget = require('../utils/EventTarget');
@@ -103768,7 +104013,7 @@ Body.prototype.integrate = function(dt, quatNormalize, quatNormalizeFast){
     this.updateInertiaWorld();
 };
 
-},{"../collision/AABB":79,"../material/Material":102,"../math/Mat3":104,"../math/Quaternion":105,"../math/Vec3":107,"../shapes/Box":114,"../shapes/Shape":120,"../utils/EventTarget":126}],109:[function(require,module,exports){
+},{"../collision/AABB":80,"../material/Material":103,"../math/Mat3":105,"../math/Quaternion":106,"../math/Vec3":108,"../shapes/Box":115,"../shapes/Shape":121,"../utils/EventTarget":127}],110:[function(require,module,exports){
 var Body = require('./Body');
 var Vec3 = require('../math/Vec3');
 var Quaternion = require('../math/Quaternion');
@@ -104472,7 +104717,7 @@ function resolveSingleBilateral(body1, pos1, body2, pos2, normal, impulse){
 
     return impulse;
 }
-},{"../collision/Ray":86,"../collision/RaycastResult":87,"../math/Quaternion":105,"../math/Vec3":107,"../objects/WheelInfo":113,"./Body":108}],110:[function(require,module,exports){
+},{"../collision/Ray":87,"../collision/RaycastResult":88,"../math/Quaternion":106,"../math/Vec3":108,"../objects/WheelInfo":114,"./Body":109}],111:[function(require,module,exports){
 var Body = require('./Body');
 var Sphere = require('../shapes/Sphere');
 var Box = require('../shapes/Box');
@@ -104694,7 +104939,7 @@ RigidVehicle.prototype.getWheelSpeed = function(wheelIndex){
     return w.dot(worldAxis);
 };
 
-},{"../constraints/HingeConstraint":92,"../math/Vec3":107,"../shapes/Box":114,"../shapes/Sphere":121,"./Body":108}],111:[function(require,module,exports){
+},{"../constraints/HingeConstraint":93,"../math/Vec3":108,"../shapes/Box":115,"../shapes/Sphere":122,"./Body":109}],112:[function(require,module,exports){
 module.exports = SPHSystem;
 
 var Shape = require('../shapes/Shape');
@@ -104909,7 +105154,7 @@ SPHSystem.prototype.nablaw = function(r){
     return nabla;
 };
 
-},{"../material/Material":102,"../math/Quaternion":105,"../math/Vec3":107,"../objects/Body":108,"../shapes/Particle":118,"../shapes/Shape":120}],112:[function(require,module,exports){
+},{"../material/Material":103,"../math/Quaternion":106,"../math/Vec3":108,"../objects/Body":109,"../shapes/Particle":119,"../shapes/Shape":121}],113:[function(require,module,exports){
 var Vec3 = require('../math/Vec3');
 
 module.exports = Spring;
@@ -105104,7 +105349,7 @@ Spring.prototype.applyForce = function(){
     bodyB.torque.vadd(rj_x_f,bodyB.torque);
 };
 
-},{"../math/Vec3":107}],113:[function(require,module,exports){
+},{"../math/Vec3":108}],114:[function(require,module,exports){
 var Vec3 = require('../math/Vec3');
 var Transform = require('../math/Transform');
 var RaycastResult = require('../collision/RaycastResult');
@@ -105387,7 +105632,7 @@ WheelInfo.prototype.updateWheel = function(chassis){
         this.clippedInvContactDotSuspension = 1.0;
     }
 };
-},{"../collision/RaycastResult":87,"../math/Transform":106,"../math/Vec3":107,"../utils/Utils":130}],114:[function(require,module,exports){
+},{"../collision/RaycastResult":88,"../math/Transform":107,"../math/Vec3":108,"../utils/Utils":131}],115:[function(require,module,exports){
 module.exports = Box;
 
 var Shape = require('./Shape');
@@ -105624,7 +105869,7 @@ Box.prototype.calculateWorldAABB = function(pos,quat,min,max){
     // });
 };
 
-},{"../math/Vec3":107,"./ConvexPolyhedron":115,"./Shape":120}],115:[function(require,module,exports){
+},{"../math/Vec3":108,"./ConvexPolyhedron":116,"./Shape":121}],116:[function(require,module,exports){
 module.exports = ConvexPolyhedron;
 
 var Shape = require('./Shape');
@@ -106552,7 +106797,7 @@ ConvexPolyhedron.project = function(hull, axis, pos, quat, result){
     result[1] = min;
 };
 
-},{"../math/Quaternion":105,"../math/Transform":106,"../math/Vec3":107,"./Shape":120}],116:[function(require,module,exports){
+},{"../math/Quaternion":106,"../math/Transform":107,"../math/Vec3":108,"./Shape":121}],117:[function(require,module,exports){
 module.exports = Cylinder;
 
 var Shape = require('./Shape');
@@ -106634,7 +106879,7 @@ function Cylinder( radiusTop, radiusBottom, height , numSegments ) {
 
 Cylinder.prototype = new ConvexPolyhedron();
 
-},{"../math/Quaternion":105,"../math/Vec3":107,"./ConvexPolyhedron":115,"./Shape":120}],117:[function(require,module,exports){
+},{"../math/Quaternion":106,"../math/Vec3":108,"./ConvexPolyhedron":116,"./Shape":121}],118:[function(require,module,exports){
 var Shape = require('./Shape');
 var ConvexPolyhedron = require('./ConvexPolyhedron');
 var Vec3 = require('../math/Vec3');
@@ -107319,7 +107564,7 @@ Heightfield.prototype.setHeightsFromImage = function(image, scale){
     this.updateMinValue();
     this.update();
 };
-},{"../math/Vec3":107,"../utils/Utils":130,"./ConvexPolyhedron":115,"./Shape":120}],118:[function(require,module,exports){
+},{"../math/Vec3":108,"../utils/Utils":131,"./ConvexPolyhedron":116,"./Shape":121}],119:[function(require,module,exports){
 module.exports = Particle;
 
 var Shape = require('./Shape');
@@ -107366,7 +107611,7 @@ Particle.prototype.calculateWorldAABB = function(pos,quat,min,max){
     max.copy(pos);
 };
 
-},{"../math/Vec3":107,"./Shape":120}],119:[function(require,module,exports){
+},{"../math/Vec3":108,"./Shape":121}],120:[function(require,module,exports){
 module.exports = Plane;
 
 var Shape = require('./Shape');
@@ -107429,7 +107674,7 @@ Plane.prototype.calculateWorldAABB = function(pos, quat, min, max){
 Plane.prototype.updateBoundingSphereRadius = function(){
     this.boundingSphereRadius = Number.MAX_VALUE;
 };
-},{"../math/Vec3":107,"./Shape":120}],120:[function(require,module,exports){
+},{"../math/Vec3":108,"./Shape":121}],121:[function(require,module,exports){
 module.exports = Shape;
 
 var Shape = require('./Shape');
@@ -107533,7 +107778,7 @@ Shape.types = {
 };
 
 
-},{"../material/Material":102,"../math/Quaternion":105,"../math/Vec3":107,"./Shape":120}],121:[function(require,module,exports){
+},{"../material/Material":103,"../math/Quaternion":106,"../math/Vec3":108,"./Shape":121}],122:[function(require,module,exports){
 module.exports = Sphere;
 
 var Shape = require('./Shape');
@@ -107592,7 +107837,7 @@ Sphere.prototype.calculateWorldAABB = function(pos,quat,min,max){
     }
 };
 
-},{"../math/Vec3":107,"./Shape":120}],122:[function(require,module,exports){
+},{"../math/Vec3":108,"./Shape":121}],123:[function(require,module,exports){
 module.exports = Trimesh;
 
 var Shape = require('./Shape');
@@ -108154,7 +108399,7 @@ Trimesh.createTorus = function (radius, tube, radialSegments, tubularSegments, a
     return new Trimesh(vertices, indices);
 };
 
-},{"../collision/AABB":79,"../math/Quaternion":105,"../math/Transform":106,"../math/Vec3":107,"../utils/Octree":127,"./Shape":120}],123:[function(require,module,exports){
+},{"../collision/AABB":80,"../math/Quaternion":106,"../math/Transform":107,"../math/Vec3":108,"../utils/Octree":128,"./Shape":121}],124:[function(require,module,exports){
 module.exports = GSSolver;
 
 var Vec3 = require('../math/Vec3');
@@ -108296,7 +108541,7 @@ GSSolver.prototype.solve = function(dt,world){
     return iter;
 };
 
-},{"../math/Quaternion":105,"../math/Vec3":107,"./Solver":124}],124:[function(require,module,exports){
+},{"../math/Quaternion":106,"../math/Vec3":108,"./Solver":125}],125:[function(require,module,exports){
 module.exports = Solver;
 
 /**
@@ -108357,7 +108602,7 @@ Solver.prototype.removeAllEquations = function(){
 };
 
 
-},{}],125:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 module.exports = SplitSolver;
 
 var Vec3 = require('../math/Vec3');
@@ -108512,7 +108757,7 @@ SplitSolver.prototype.solve = function(dt,world){
 function sortById(a, b){
     return b.id - a.id;
 }
-},{"../math/Quaternion":105,"../math/Vec3":107,"../objects/Body":108,"./Solver":124}],126:[function(require,module,exports){
+},{"../math/Quaternion":106,"../math/Vec3":108,"../objects/Body":109,"./Solver":125}],127:[function(require,module,exports){
 /**
  * Base class for objects that dispatches events.
  * @class EventTarget
@@ -108613,7 +108858,7 @@ EventTarget.prototype = {
     }
 };
 
-},{}],127:[function(require,module,exports){
+},{}],128:[function(require,module,exports){
 var AABB = require('../collision/AABB');
 var Vec3 = require('../math/Vec3');
 
@@ -108848,7 +109093,7 @@ OctreeNode.prototype.removeEmptyNodes = function() {
     }
 };
 
-},{"../collision/AABB":79,"../math/Vec3":107}],128:[function(require,module,exports){
+},{"../collision/AABB":80,"../math/Vec3":108}],129:[function(require,module,exports){
 module.exports = Pool;
 
 /**
@@ -108925,7 +109170,7 @@ Pool.prototype.resize = function (size) {
 };
 
 
-},{}],129:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 module.exports = TupleDictionary;
 
 /**
@@ -108992,7 +109237,7 @@ TupleDictionary.prototype.reset = function() {
     }
 };
 
-},{}],130:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 function Utils(){}
 
 module.exports = Utils;
@@ -109017,7 +109262,7 @@ Utils.defaults = function(options, defaults){
     return options;
 };
 
-},{}],131:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 module.exports = Vec3Pool;
 
 var Vec3 = require('../math/Vec3');
@@ -109043,7 +109288,7 @@ Vec3Pool.prototype.constructObject = function(){
     return new Vec3();
 };
 
-},{"../math/Vec3":107,"./Pool":128}],132:[function(require,module,exports){
+},{"../math/Vec3":108,"./Pool":129}],133:[function(require,module,exports){
 module.exports = Narrowphase;
 
 var AABB = require('../collision/AABB');
@@ -110905,7 +111150,7 @@ Narrowphase.prototype.sphereHeightfield = function (
     }
 };
 
-},{"../collision/AABB":79,"../collision/Ray":86,"../equations/ContactEquation":96,"../equations/FrictionEquation":98,"../math/Quaternion":105,"../math/Transform":106,"../math/Vec3":107,"../objects/Body":108,"../shapes/ConvexPolyhedron":115,"../shapes/Shape":120,"../solver/Solver":124,"../utils/Vec3Pool":131}],133:[function(require,module,exports){
+},{"../collision/AABB":80,"../collision/Ray":87,"../equations/ContactEquation":97,"../equations/FrictionEquation":99,"../math/Quaternion":106,"../math/Transform":107,"../math/Vec3":108,"../objects/Body":109,"../shapes/ConvexPolyhedron":116,"../shapes/Shape":121,"../solver/Solver":125,"../utils/Vec3Pool":132}],134:[function(require,module,exports){
 /* global performance */
 
 module.exports = World;
@@ -111939,7 +112184,7 @@ World.prototype.clearForces = function(){
     }
 };
 
-},{"../collision/AABB":79,"../collision/ArrayCollisionMatrix":80,"../collision/NaiveBroadphase":83,"../collision/OverlapKeeper":85,"../collision/Ray":86,"../collision/RaycastResult":87,"../equations/ContactEquation":96,"../equations/FrictionEquation":98,"../material/ContactMaterial":101,"../material/Material":102,"../math/Quaternion":105,"../math/Vec3":107,"../objects/Body":108,"../shapes/Shape":120,"../solver/GSSolver":123,"../utils/EventTarget":126,"../utils/TupleDictionary":129,"./Narrowphase":132}],134:[function(require,module,exports){
+},{"../collision/AABB":80,"../collision/ArrayCollisionMatrix":81,"../collision/NaiveBroadphase":84,"../collision/OverlapKeeper":86,"../collision/Ray":87,"../collision/RaycastResult":88,"../equations/ContactEquation":97,"../equations/FrictionEquation":99,"../material/ContactMaterial":102,"../material/Material":103,"../math/Quaternion":106,"../math/Vec3":108,"../objects/Body":109,"../shapes/Shape":121,"../solver/GSSolver":124,"../utils/EventTarget":127,"../utils/TupleDictionary":130,"./Narrowphase":133}],135:[function(require,module,exports){
 /*!
  * jQuery JavaScript Library v1.12.4
  * http://jquery.com/
@@ -122949,7 +123194,7 @@ if ( !noGlobal ) {
 return jQuery;
 }));
 
-},{}],135:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -126496,7 +126741,7 @@ return jQuery;
 
 /***/ }
 /******/ ]);
-},{}],136:[function(require,module,exports){
+},{}],137:[function(require,module,exports){
 AFRAME.registerComponent('remove-in-seconds', {
   schema: {
     default: 1
@@ -126511,7 +126756,7 @@ AFRAME.registerComponent('remove-in-seconds', {
   	el.parentNode.removeChild(el);
   }
 });
-},{}],137:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 AFRAME.registerComponent('spawn-in-circle', {
   schema: {
     radius: {type: 'number', default: 1}
@@ -126542,7 +126787,7 @@ AFRAME.registerComponent('spawn-in-circle', {
     return {x: x, y: y};
   }
 });
-},{}],138:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 var CANNON = require('cannon'),
     quickhull = require('./lib/THREE.quickhull');
 
@@ -126907,7 +127152,7 @@ function getMeshes (object) {
   return meshes;
 }
 
-},{"./lib/THREE.quickhull":139,"cannon":78}],139:[function(require,module,exports){
+},{"./lib/THREE.quickhull":140,"cannon":79}],140:[function(require,module,exports){
 /**
 
   QuickHull
@@ -127359,5 +127604,5 @@ module.exports = (function(){
 
 }())
 
-},{}]},{},[7])
+},{}]},{},[8])
 //# sourceMappingURL=index.js.map

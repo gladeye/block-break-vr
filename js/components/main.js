@@ -143,56 +143,7 @@ AFRAME.registerSystem('main', {
 
         this.optimizeMobile();
 
-        //var gameFloor = document.querySelector('#environment-collision1');
-
-        // var gameFloorWidth = parseInt(gameFloor.getAttribute('width'));
-        // var gameFloorDepth = parseInt(gameFloor.getAttribute('depth'));
-
-        // var TeamOneRelic = {x: (gameFloorWidth/2)+(Math.floor(Math.Random * 2)+1), y: 2, z: (gameFloorDepth/2)+(Math.floor(Math.Random * 2)+1)};
-        // var TeamTwoRelic = {x: gameFloorWidth/2, y: 2, z: gameFloorDepth/2}; //(Math.floor(Math.random() * 2) + 1  )
-
-
-        var parentEntity = document.createElement('a-entity');
-        parentEntity.setAttribute('position', '12 2 12');
-
-        var emptyEntity = document.createElement('a-entity');
-        emptyEntity.setAttribute('class', 'relic');
-        emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
-        emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
-        emptyEntity.setAttribute('static-body', '');
-
-                    
-        var entity = document.createElement('a-entity');
-        entity.setAttribute('class', 'relic');
-        entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
-        entity.setAttribute('scale', '5 5 5');
-        entity.setAttribute('shadow', 'receive: false');
-        entity.setAttribute('static-body',  '');
-        entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
-        parentEntity.appendChild(entity);
-        parentEntity.appendChild(emptyEntity);
-        sceneEl.appendChild(parentEntity);
-
-        var parentEntity = document.createElement('a-entity');
-        parentEntity.setAttribute('position', '-12 2 -12');
-
-        var emptyEntity = document.createElement('a-entity');
-        emptyEntity.setAttribute('class', 'relic');
-        emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
-        emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
-        emptyEntity.setAttribute('static-body', '');
-
-        var entity = document.createElement('a-entity');
-        entity.setAttribute('class', 'relic');
-        entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
-        entity.setAttribute('scale', '5 5 5');
-        entity.setAttribute('shadow', 'receive: false');
-        entity.setAttribute('static-body',  '');
-        entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
-        parentEntity.appendChild(entity);
-        parentEntity.appendChild(emptyEntity);
-        sceneEl.appendChild(parentEntity); 
-
+        this.spawnRelics(sceneEl);
 
         var playerEl = document.getElementById('player');
         playerEl.addEventListener('relic-hit', this.onRelicHit.bind(this));
@@ -338,6 +289,59 @@ AFRAME.registerSystem('main', {
                 rightHand.parentNode.removeChild(rightHand);
             }
 
+        }
+    },
+
+    spawnRelics: function(sceneEl) {
+
+        var gameFloor = document.querySelector('#environment-collision1');
+
+        var gameFloorWidth = parseInt(gameFloor.getAttribute('width'));
+        var gameFloorDepth = parseInt(gameFloor.getAttribute('depth')); // unused for now
+
+        var i = 0;
+        while( i <= 1 ){
+
+            /**
+            *   WARNING: 
+            *   Currently assumes the width/depth are equal (arena is square)
+            */
+
+            var randomSpot = Math.floor(Math.random()*(gameFloorWidth/2)) + 1; // this will get a number between 1 and (gameFloorWidth/2)
+            randomSpot *= Math.floor(Math.random()*2) == 1 ? 1 : -1; // this will add minus sign in 50% of cases
+
+            // Spawn the relic on opposite sides of the arena, at a random point on the Z axis
+            var relicPosition = '11 2 '+randomSpot;
+
+            if( i == 1){
+                relicPosition = '-11 2 '+randomSpot; // @TODO figure out a nicer way to handle X axis for these
+                                                    // Think about how this can be factored into number of teams playing
+            }
+
+            var parentEntity = document.createElement('a-entity');
+            parentEntity.setAttribute('position', relicPosition);
+
+            var emptyEntity = document.createElement('a-entity');
+            emptyEntity.setAttribute('class', 'relic');
+            emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
+            emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
+            emptyEntity.setAttribute('static-body', '');
+
+                        
+            var entity = document.createElement('a-entity');
+            entity.setAttribute('class', 'relic');
+            entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
+            entity.setAttribute('scale', '5 5 5');
+            entity.setAttribute('shadow', 'receive: false');
+            entity.setAttribute('static-body',  '');
+            entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
+            parentEntity.appendChild(entity);
+            parentEntity.appendChild(emptyEntity);
+
+            console.log('spawning relic: '+i+' at position '+ relicPosition);
+            sceneEl.appendChild(parentEntity);
+
+            i++;      
         }
     }
 });

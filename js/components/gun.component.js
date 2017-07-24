@@ -104,12 +104,11 @@ AFRAME.registerComponent('gun', {
             hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
         });*/
 
-        this.playExplodeSound(hitEl);
+        this.explodeVoxel(hitEl);
 
-        setTimeout(function(){
+        //setTimeout(function(){
             hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
-        },150);
-
+        //},150);
 
 
         bulletEl.parentNode.removeChild(bulletEl);
@@ -136,6 +135,63 @@ AFRAME.registerComponent('gun', {
         hitEl.setAttribute('sound','src',soundArray[randomKey]);
 
         hitEl.components.sound.playSound();
-    }
+    },
+
+    explodeVoxel: function(hitEl) {
+
+        this.playExplodeSound(hitEl);
+
+        var explosionPoint = hitEl.object3D.getWorldPosition(); // impulse center point
+        var explosionFragmentsAmount = 11;
+
+        var i=0;
+        while( i <= explosionFragmentsAmount){
+
+            var fragmentPositionRadomisers = {
+                x: parseFloat((Math.random() * (0.1 - 0.5) + 0.5).toFixed(4)),
+                y: parseFloat((Math.random() * ((-0.3) - 0.3) + 1).toFixed(4)),
+                z: parseFloat((Math.random() * (0.1 - 0.5) + 0.5).toFixed(4))
+            }
+
+            // randomize positive/negative values for X/Z axes only 
+            // so voxels on the ground level don't create fragments below the ground
+            fragmentPositionRadomisers.x *= Math.floor(Math.random()*2) == 1 ? 1 : -1; // this will add minus sign in 50% of cases
+            fragmentPositionRadomisers.z *= Math.floor(Math.random()*2) == 1 ? 1 : -1;
+
+            let fragmentPosition = {
+                x: explosionPoint.x+fragmentPositionRadomisers.x, 
+                y: explosionPoint.y,//+fragmentPositionRadomisers.y, 
+                z: explosionPoint.z+fragmentPositionRadomisers.z
+            };
+
+            var fragment = document.createElement('a-entity');
+
+            var fragmentColours = ['#CCC', '#666', '#444', '#888', '#111', '#222', '#333', '#777', '#AAA', '#632f02', '#40342a'];
+            var randomColour = fragmentColours[Math.floor(Math.random() * fragmentColours.length)];
+
+            var fragmentSizes = [0.075, 0.05, 0.025, 0.01];
+            var randomSize = fragmentSizes[Math.floor(Math.random() * fragmentSizes.length)];
+
+            fragment.setAttribute('class', 'voxelFragment'+i);
+            fragment.setAttribute('position', fragmentPosition);
+            fragment.setAttribute('geometry', { primitive: 'box', height: randomSize, width: randomSize, depth: randomSize });
+            fragment.setAttribute('remove-in-seconds', 3);
+            fragment.setAttribute('material', { color: randomColour });
+
+            hitEl.sceneEl.appendChild(fragment);
+
+            fragment.setAttribute('dynamic-body', 'mass: 1');
+
+            fragment.addEventListener('body-loaded', function(fragEvent){
+                var frag = this;
+                setTimeout(function () {
+                    frag.body.applyImpulse(new CANNON.Vec3(Math.random()*2-1, Math.random()*2-1, Math.random()*2-1), explosionPoint);
+                }, 0);
+            });
+
+            i++;
+        }
+        
+    },
 
 });
