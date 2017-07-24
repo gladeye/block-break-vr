@@ -146,7 +146,7 @@ AFRAME.registerSystem('main', {
         this.spawnRelics(sceneEl);
 
         var playerEl = document.getElementById('player');
-        playerEl.addEventListener('relic-hit', this.onRelicHit.bind(this));
+        playerEl.addEventListener('relic-destroyed', this.onRelicDestroyed.bind(this));
     },
 
     playBlockSound: function(){
@@ -194,12 +194,8 @@ AFRAME.registerSystem('main', {
      */
     play: function () { },
 
-    onRelicHit: function(e){ 
-        console.log('fired from relic-hit event', e);
-
+    onRelicDestroyed: function(e){ 
         this.gameOver();
-
-
     },
 
     gameOver: function () {
