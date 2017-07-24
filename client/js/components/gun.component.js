@@ -141,21 +141,8 @@ AFRAME.registerComponent('gun', {
 
         this.playExplodeSound(hitEl);
 
-        var dt=1/60, f=100; // impulse strength
-        var impulse = new CANNON.Vec3(f*dt,0,0); // impulse direction
-
         var explosionPoint = hitEl.object3D.getWorldPosition(); // impulse center point
         var explosionFragmentsAmount = 11;
-
-
-        // Dust particles
-        //<a-entity position="0 2.25 -15" particle-system="preset: dust"></a-entity>
-        var dustEntity = document.createElement('a-entity');
-        dustEntity.setAttribute('position', explosionPoint);
-        dustEntity.setAttribute('particle-system', {preset: 'dust'});
-        dustEntity.setAttribute('remove-in-seconds', 3);
-
-        //hitEl.sceneEl.appendChild(dustEntity);
 
         var i=0;
         while( i <= explosionFragmentsAmount){
@@ -189,16 +176,15 @@ AFRAME.registerComponent('gun', {
             fragment.setAttribute('position', fragmentPosition);
             fragment.setAttribute('geometry', { primitive: 'box', height: randomSize, width: randomSize, depth: randomSize });
             fragment.setAttribute('remove-in-seconds', 3);
-            fragment.setAttribute('material', {color: randomColour});
+            fragment.setAttribute('material', { color: randomColour });
 
             hitEl.sceneEl.appendChild(fragment);
 
-            fragment.setAttribute('dynamic-body', 'mass: 1'); //'mass: 80'
+            fragment.setAttribute('dynamic-body', 'mass: 1');
 
             fragment.addEventListener('body-loaded', function(fragEvent){
                 var frag = this;
                 setTimeout(function () {
-                    //frag.body.applyImpulse(impulse,explosionPoint);
                     frag.body.applyImpulse(new CANNON.Vec3(Math.random()*2-1, Math.random()*2-1, Math.random()*2-1), explosionPoint);
                 }, 0);
             });
