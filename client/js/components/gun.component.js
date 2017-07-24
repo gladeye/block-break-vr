@@ -78,7 +78,7 @@ AFRAME.registerComponent('gun', {
                     this.destroyVoxel(hitEl,bulletEl);
                     break;
                 case 'relic':
-                    this.el.emit('relic-hit');
+                    this.hitRelic(hitEl);
                     console.log('Hit relic');
                     break;
                 case 'bullet-collider':
@@ -86,7 +86,25 @@ AFRAME.registerComponent('gun', {
                     break;
             }
 
+            // destory the bullet
+            this.destroyBullet(bulletEl);
+
         }
+    },
+
+    destroyBullet: function(bulletEl) {
+        bulletEl.parentNode.removeChild(bulletEl);
+    },
+
+    hitRelic: function (hitEl) {
+        console.log('hit relic:', hitEl);
+
+        var relicHp = parseInt(hitEl.getAttribute('hp'));
+
+        console.log('relic HP: ', relicHp);
+
+        // Send out the relic hit event 
+        this.el.emit('relic-hit');
     },
 
     destroyVoxel: function (hitEl,bulletEl) {
@@ -109,9 +127,6 @@ AFRAME.registerComponent('gun', {
         //setTimeout(function(){
             hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
         //},150);
-
-
-        bulletEl.parentNode.removeChild(bulletEl);
 
         //TODO: spawn explosion at world coordinates then delete the bomb
         //TODO: add logic to explosion to remove collided entities
