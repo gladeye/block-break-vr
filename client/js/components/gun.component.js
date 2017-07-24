@@ -93,18 +93,29 @@ AFRAME.registerComponent('gun', {
     },
 
     destroyBullet: function(bulletEl) {
+
+        //TODO: spawn explosion at world coordinates then delete the bomb
+        //TODO: add logic to explosion to remove collided entities
         bulletEl.parentNode.removeChild(bulletEl);
     },
 
     hitRelic: function (hitEl) {
-        console.log('hit relic:', hitEl);
 
-        var relicHp = parseInt(hitEl.getAttribute('hp'));
+        var relicHp = parseInt(hitEl.getAttribute('hp'))-1;
 
-        console.log('relic HP: ', relicHp);
+        if(relicHp >= 0){
+            hitEl.setAttribute('hp', relicHp);
 
-        // Send out the relic hit event 
-        this.el.emit('relic-hit');
+            if(relicHp <= 0){
+                this.el.emit('relic-destroyed');
+            }
+
+            console.log(hitEl.getAttribute('hp'));
+
+            // Send out the relic hit event 
+            this.el.emit('relic-hit');          
+        }
+
     },
 
     destroyVoxel: function (hitEl,bulletEl) {
@@ -128,8 +139,6 @@ AFRAME.registerComponent('gun', {
             hitEl.parentNode.parentNode.removeChild(hitEl.parentNode);
         //},150);
 
-        //TODO: spawn explosion at world coordinates then delete the bomb
-        //TODO: add logic to explosion to remove collided entities
         console.log('Hit voxel');
     },
 
