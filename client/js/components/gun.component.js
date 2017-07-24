@@ -104,7 +104,11 @@ AFRAME.registerComponent('gun', {
         var relicHp = parseInt(hitEl.getAttribute('hp'))-1;
 
         if(relicHp >= 0){
+            var relicOpacity = 1/relicHp;
+
             hitEl.setAttribute('hp', relicHp);
+
+            hitEl.setAttribute('material', {transparent: true, opacity: relicOpacity});
 
             if(relicHp <= 0){
                 this.el.emit('relic-destroyed');

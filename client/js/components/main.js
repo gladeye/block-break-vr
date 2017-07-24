@@ -327,7 +327,8 @@ AFRAME.registerSystem('main', {
                         
             var entity = document.createElement('a-entity');
             entity.setAttribute('class', 'relic');
-            entity.setAttribute('obj-model', 'obj: #crystal-block-obj; mtl: #crystal-block-mtl');
+            entity.setAttribute('obj-model', 'obj: #crystal-block-obj;');
+            entity.setAttribute('material', 'transparent: true; opacity: 1;');
             entity.setAttribute('scale', '5 5 5');
             entity.setAttribute('shadow', 'receive: false');
             entity.setAttribute('static-body',  '');
