@@ -1,7 +1,8 @@
 AFRAME.registerComponent('auto-fall-respawn', {
     schema: {
         fallHeight: {type: 'int', default: -50},
-        respawnPosition: {type: 'vec3', default: {x: 0, y: 20, z: 0}}
+        respawnPosition: {type: 'vec3', default: {x: 0, y: 20, z: 0}},
+        respawnRotation: {type: 'vec3', default: {x: 0, y: 0, z: 0}}
     },
 
     originalPhysicsType: '',
@@ -33,6 +34,9 @@ AFRAME.registerComponent('auto-fall-respawn', {
             }
 
             this.el.setAttribute('position',this.data.respawnPosition);
+            this.el.object3D.rotation.x = this.de2ra(this.data.respawnRotation.x);
+            this.el.object3D.rotation.y = this.de2ra(this.data.respawnRotation.y);
+            this.el.object3D.rotation.z = this.de2ra(this.data.respawnRotation.z);
 
             this.el.emit('respawned');
         }
@@ -50,5 +54,9 @@ AFRAME.registerComponent('auto-fall-respawn', {
         }
 
         return physicsType;
+    },
+
+    de2ra: function(degree) {
+        return degree*(Math.PI/180);
     }
 });
