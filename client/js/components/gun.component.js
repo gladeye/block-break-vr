@@ -88,8 +88,33 @@ AFRAME.registerComponent('gun', {
 
             // destory the bullet
             this.destroyBullet(bulletEl);
-
         }
+    },
+
+    destroyBullet: function(bulletEl) {
+
+        //TODO: spawn explosion at world coordinates then delete the bomb
+        //TODO: add logic to explosion to remove collided entities
+        bulletEl.parentNode.removeChild(bulletEl);
+    },
+
+    hitRelic: function (hitEl) {
+
+        var relicHp = parseInt(hitEl.getAttribute('hp'))-1;
+
+        if(relicHp >= 0){
+            hitEl.setAttribute('hp', relicHp);
+
+            if(relicHp <= 0){
+                this.el.emit('relic-destroyed');
+            }
+
+            console.log(hitEl.getAttribute('hp'));
+
+            // Send out the relic hit event 
+            this.el.emit('relic-hit');          
+        }
+
     },
 
     destroyBullet: function(bulletEl) {
