@@ -194,8 +194,8 @@ AFRAME.registerSystem('main', {
      */
     play: function () { },
 
-    onRelicHit: function(){ 
-        console.log('fired from relic-hit event');
+    onRelicHit: function(e){ 
+        console.log('fired from relic-hit event', e);
 
         this.gameOver();
 
@@ -321,11 +321,12 @@ AFRAME.registerSystem('main', {
             var parentEntity = document.createElement('a-entity');
             parentEntity.setAttribute('position', relicPosition);
 
-            var emptyEntity = document.createElement('a-entity');
-            emptyEntity.setAttribute('class', 'relic');
-            emptyEntity.setAttribute('material', 'transparent: true; opacity: 0;');
-            emptyEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
-            emptyEntity.setAttribute('static-body', '');
+            var relicEntity = document.createElement('a-entity');
+            relicEntity.setAttribute('class', 'relic');
+            relicEntity.setAttribute('material', 'transparent: true; opacity: 0;');
+            relicEntity.setAttribute('geometry', 'primitive: box; height: 1; width: 1; depth: 1');
+            relicEntity.setAttribute('hp',  '5');
+            relicEntity.setAttribute('static-body', '');
 
                         
             var entity = document.createElement('a-entity');
@@ -336,9 +337,8 @@ AFRAME.registerSystem('main', {
             entity.setAttribute('static-body',  '');
             entity.setAttribute('snap','offset: 0.5 0.5 0.5; snap: 1 1 1');
             parentEntity.appendChild(entity);
-            parentEntity.appendChild(emptyEntity);
+            parentEntity.appendChild(relicEntity);
 
-            console.log('spawning relic: '+i+' at position '+ relicPosition);
             sceneEl.appendChild(parentEntity);
 
             i++;      
