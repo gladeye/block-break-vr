@@ -121,7 +121,7 @@ AFRAME.registerComponent('gladeye-jump-ability', {
   },
 
   stopFallingSound: function() {
-    if(this.data.soundFalling.length >= 1){
+    if(this.data.soundFalling.length >= 1 && this.el.components.sound){
       this.el.components.sound.stopSound();
     }
   },
